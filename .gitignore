@@ -1,6 +1,7 @@
 aws-lambda-cpp
 aws-sdk-cpp
 example/build
+src/build
 
 
 

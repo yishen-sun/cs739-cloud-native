@@ -71,3 +71,8 @@ make && make install
 # --zip-file fileb://encoder.zip
 
 # aws lambda invoke --function-name encode-file --payload '{"s3bucket": "bucketencoder", "s3key":"test.txt" }' base64_image.txt
+
+
+
+# https://docs.aws.amazon.com/cli/latest/userguide/sso-configure-profile-token.html#sso-configure-profile-token-auto-sso
+# https://docs.aws.amazon.com/sdkref/latest/guide/access-sso.html
