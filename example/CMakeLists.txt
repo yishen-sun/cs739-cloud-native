@@ -16,7 +16,7 @@
 cmake_minimum_required(VERSION 3.10)
 project(s3_file_modifier)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
 
 # Locate the AWS SDK for C++ package
 find_package(AWSSDK REQUIRED COMPONENTS s3)

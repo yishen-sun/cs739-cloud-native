@@ -4,12 +4,12 @@
 #include "leveldb/wrapper_db.h"
 
 int main() {
-  leveldb::LevelDBWrapper* db = new leveldb::LevelDBWrapper();
+  leveldb::LevelDBWrapper* db = new leveldb::LevelDBWrapper("bucketencoder", "test/", "us-east-2");
   leveldb::Options options;
   options.create_if_missing = true;
 
   // Open or create the LevelDB database
-  leveldb::Status status = db->Open(options, "testdb");
+  leveldb::Status status = db->Open(options);
   assert(status.ok());
 
   // Write a key-value pair to the database
