@@ -7,6 +7,10 @@ service GossipNodeService {
     rpc LeaveNetwork (LeaveRequest) returns (LeaveResponse) {}
     rpc Gossip (GossipRequest) returns (GossipResponse) {}
     rpc UpdateRing (UpdateRingRequest) returns (UpdateRingResponse) {}
+    rpc ClientGet(GetRequest) returns (GetResponse) {}
+    rpc ClientPut(PutRequest) returns (PutResponse) {}
+    rpc PeerGet(PeerGetRequest) returns (PeerGetResponse) {}
+    rpc PeerPut(PeerPutRequest) returns (peerPutResponse) {}
 }
 
 message JoinRequest {
@@ -44,4 +48,46 @@ message UpdateRingResponse {
 message KeyValuePair {
     uint64 key = 1;
     string value = 2;
+}
+
+message GetRequest {
+    string key = 1;
+}
+
+message GetResponse {
+    repeated Data = 1;
+}
+
+message Data {
+    string value = 1;
+    repeated ServerVersion = 2;
+}
+
+message ServerVersion {
+    string server = 1;
+    int version = 2;
+}
+
+message PutRequest {
+    KeyValuePair data = 1;
+}
+
+message PutResponse {
+    bool success = 1;
+}
+
+message PeerPutRequest {
+    KeyValuePair data = 1;
+}
+
+message PeerPutRequest {
+    bool success = 1;
+}
+
+message PeerGetRequest {
+    string key = 1;
+}
+
+message PeerGetResponse {
+    bool success = 1;
 }

@@ -57,6 +57,66 @@ grpc::Status GossipNode::UpdateRing(grpc::ServerContext *context, const gossipno
   return grpc::Status::OK;
 }
 
+grpc::Status GossipNode::ClientGet(grpc::ServerContext *context, const gossipnode::GetRequest *request, gossipnode::GetResponse *response) {
+    // read value from 3 replica, receive more than 2 acknowledgement before return to clients
+    // data vector clock [[server_name, timestamp] ...] 
+    std::string key = request->key();
+
+    // get three replica addr
+    // std::vector<name> ring_.get_repicaa(<hash value or value>);
+    
+    // init result array
+
+    // send grpc request to get data
+    // for all addr in vector
+    //   if addr == current:
+    //         put result 
+    //   else:
+    //       send peerGet
+    //           add result
+    // check conflict:
+    //    if not conflict -> add the latest version to result array
+    //    else -> add all version to result array
+    // construct result array
+
+    return grpc::Status::OK;
+}
+
+grpc::Status GossipNode::ClientPut(grpc::ServerContext *context, const gossipnode::PutgRequest *request, gossipnode::PutResponse *response) {
+  // write value in 3 physical node, receive more than 2 acknowledgement before return to clients
+  std::string key = request->key();
+  std::string value = request->data
+  
+  // 1. get three replica addr
+  // 2. <send grpc request to put data>
+  // for all addr in vector:
+  //    if addr == current:
+  //         put result
+  //    else:
+  //         send peerPut
+  // if more than 2 success:
+  //   return success
+  return grpc::Status::OK;
+}
+
+grpc::Status GossipNode::PeerPut(grpc::ServerContext *context, const gossipnode::PeerPutgRequest *request, gossipnode::PeerPutResponse *response) {
+  // put result into rings
+  return grpc::Status::OK;
+}
+
+grpc::Status GossipNode::PeerGet(grpc::ServerContext *context, const gossipnode::PeerGetRequest *request, gossipnode::PeerGetResponse *response) {
+  // get result, put result into request results.
+  return grpc::Status::OK;
+}
+
+void GossipNode::peerPut(const std::string server, const std::string key, const std::string value) {
+
+};
+
+void GossipNode::peerGet() {
+
+}
+
 void GossipNode::updateRing(const std::map<size_t, std::string>& updated_ring) {
 //   ring_ = ConsistentHashingRing(ring_.num_virtual_nodes_);
 //   for (const auto& entry : updated_ring) {

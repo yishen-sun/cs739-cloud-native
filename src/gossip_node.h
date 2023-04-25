@@ -27,6 +27,9 @@ public:
   void gossip();
   // send heartbeat to a set of random node
 
+  void peerPut();
+  void peerGet();
+
   // gRPC service method implementations
   grpc::Status JoinNetwork(grpc::ServerContext *context, const gossipnode::JoinRequest *request, gossipnode::JoinResponse *response) override;
   grpc::Status LeaveNetwork(grpc::ServerContext *context, const gossipnode::LeaveRequest *request, gossipnode::LeaveResponse *response) override;
@@ -42,13 +45,14 @@ public:
   grpc::Status UpdateRing(grpc::ServerContext *context, const gossipnode::UpdateRingRequest *request, gossipnode::UpdateRingResponse *response) override;
   
   // write value in 3 physical node, receive more than 2 acknowledgement before return to clients
-  grpc::Status Put(grpc::ServerContext *context, const gossipnode::PutgRequest *request, gossipnode::PutResponse *response) override;
-      
+  grpc::Status ClientPut(grpc::ServerContext *context, const gossipnode::PutgRequest *request, gossipnode::PutResponse *response) override;
   // read value from 3 replica, receive more than 2 acknowledgement before return to clients
   // data vector clock [[server_name, timestamp] ...] 
-  grpc::Status Get(grpc::ServerContext *context, const gossipnode::GetRequest *request, gossipnode::GetResponse *response) override;
-      
-  grpc::Status Delete(grpc::ServerContext *context, const gossipnode::DeleteRequest *request, gossipnode::DeleteResponse *response) override;
+  grpc::Status ClientGet(grpc::ServerContext *context, const gossipnode::GetRequest *request, gossipnode::GetResponse *response) override;
+  grpc::Status ClientDelete(grpc::ServerContext *context, const gossipnode::DeleteRequest *request, gossipnode::DeleteResponse *response) override;
+
+  grpc::Status PeerPut(grpc::ServerContext *context, const gossipnode::PeerPutgRequest *request, gossipnode::PeerPutResponse *response) override;
+  grpc::Status PeerGet(grpc::ServerContext *context, const gossipnode::PeerGetRequest *request, gossipnode::PeerGetResponse *response) override;
 
 /*
 bucket name: db
