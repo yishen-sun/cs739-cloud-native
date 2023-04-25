@@ -1,11 +1,11 @@
 #include "consistent_hashing_ring.h"
-#include <functional>
+
 
 ConsistentHashingRing::ConsistentHashingRing(int num_virtual_nodes)
     : num_virtual_nodes_(num_virtual_nodes) {}
 
 size_t ConsistentHashingRing::hashFunction(const std::string& key) {
-    //sha256
+    // output range [0, 2^64 - 1] = [0, 18,446,744,073,709,551,615].
     return std::hash<std::string>{}(key);
 }
 
@@ -40,8 +40,27 @@ std::string ConsistentHashingRing::getNode(const std::string& key) {
     return it->second;
 }
 
-std::vector<std::string> ConsistentHashingRing::getNodesInRange(const std::string& start_key,
-                                                                 const std::string& end_key) {
-    // To be implemented, if needed
-    return {};
+std::vector<std::string> ConsistentHashingRing::getReplicasNodes(const std::string& key, int num_replicas) {
+    std::vector<std::string> nodes_vec;
+
+    if (ring_.empty()) {
+        return nodes_vec;
+    }
+
+    std::unordered_set<std::string> nodes_set;
+    size_t hash = hashFunction(key);
+    size_t i = hash;
+    while (nodes_vec.size() < num_replicas) {
+        auto it = ring_.lower_bound(i);
+        if (it == ring_.end()) {
+            it = ring_.begin();
+        }
+        if (nodes_set.count(it->second) == 0) {
+            nodes_set.emplace(it->second);
+            nodes_vec.push_back(it->second);
+        }
+        i = (it->first)++;
+    }
+    
+    return nodes_vec;
 }

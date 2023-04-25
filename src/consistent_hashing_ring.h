@@ -4,6 +4,8 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <unordered_set>
+#include <functional>
 
 class ConsistentHashingRing {
 public:
@@ -12,7 +14,7 @@ public:
     void addNode(const std::string& node_id);
     void removeNode(const std::string& node_id);
     std::string getNode(const std::string& key);
-    std::vector<std::string> getNodesInRange(const std::string& start_key, const std::string& end_key);
+    std::vector<std::string> getReplicasNodes(const std::string& key, int num_replicas);
 
 private:
     int num_virtual_nodes_;
