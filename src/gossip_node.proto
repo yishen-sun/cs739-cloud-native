@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package gossipnode;
+
+service GossipNodeService {
+    rpc JoinNetwork (JoinRequest) returns (JoinResponse) {}
+    rpc LeaveNetwork (LeaveRequest) returns (LeaveResponse) {}
+    rpc Gossip (GossipRequest) returns (GossipResponse) {}
+    rpc UpdateRing (UpdateRingRequest) returns (UpdateRingResponse) {}
+}
+
+message JoinRequest {
+    string node_id = 1;
+}
+
+message JoinResponse {
+    bool success = 1;
+}
+
+message LeaveRequest {
+    string node_id = 1;
+}
+
+message LeaveResponse {
+    bool success = 1;
+}
+
+message GossipRequest {
+    repeated KeyValuePair ring_data = 1;
+}
+
+message GossipResponse {
+    bool success = 1;
+}
+
+message UpdateRingRequest {
+    repeated KeyValuePair ring_data = 1;
+}
+
+message UpdateRingResponse {
+    bool success = 1;
+}
+
+message KeyValuePair {
+    uint64 key = 1;
+    string value = 2;
+}
