@@ -59,10 +59,16 @@ std::vector<std::string> ConsistentHashingRing::getReplicasNodes(const std::stri
             nodes_set.emplace(it->second);
             nodes_vec.push_back(it->second);
         }
-        // TODO: error
-        i = (it->first);
+        i = (it->first) + 1;
         
     }
     
     return nodes_vec;
+}
+
+void ConsistentHashingRing::printAllVirtualNode() {
+    std::cout << "printAllVirtualNode" << std::endl;
+    for (const auto& kv : ring_) {
+        std::cout << "Key: " << kv.first << " Value: " << kv.second << std::endl;
+    }
 }

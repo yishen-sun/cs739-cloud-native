@@ -6,6 +6,7 @@
 #include <vector>
 #include <unordered_set>
 #include <functional>
+#include <iostream>
 
 class ConsistentHashingRing {
 public:
@@ -16,6 +17,7 @@ public:
     std::string getNode(const std::string& key);
     std::vector<std::string> getReplicasNodes(const std::string& key, int num_replicas);
     size_t hashFunction(const std::string& key);
+    void printAllVirtualNode();
 
 private:
     int num_virtual_nodes_;

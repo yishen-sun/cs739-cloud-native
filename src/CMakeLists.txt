@@ -59,12 +59,16 @@ target_link_libraries(client_cli
     ${_PROTOBUF_LIBPROTOBUF}
     stdc++fs)
 
-# add_executable(consistent_hashing_ring_test 
-#     consistent_hashing_ring_test.cpp
-#     ${hw_proto_srcs}
-#     ${hw_grpc_srcs}
-#     consistent_hashing_ring.cpp)
-
+add_executable(consistent_hashing_ring_test 
+    consistent_hashing_ring_test.cpp
+    ${hw_proto_srcs}
+    ${hw_grpc_srcs}
+    consistent_hashing_ring.cpp)
+target_link_libraries(consistent_hashing_ring_test
+    ${_REFLECTION}
+    ${_GRPC_GRPCPP}
+    ${_PROTOBUF_LIBPROTOBUF}
+    stdc++fs)
 # add_executable(gossip_node_test 
 #     gossip_node_test.cpp
 #     ${hw_proto_srcs}
