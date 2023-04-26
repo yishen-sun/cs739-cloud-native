@@ -89,5 +89,5 @@ message PeerGetRequest {
 }
 
 message PeerGetResponse {
-    repeated Data = 1;
+    Data data = 1;
 }
