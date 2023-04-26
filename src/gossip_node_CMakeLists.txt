@@ -64,3 +64,8 @@ foreach(_target
     stdc++fs)
 endforeach()
 
+
+
+
+
+add_executable(test_state_machine test_state_machine.cpp state_machine.cpp)
