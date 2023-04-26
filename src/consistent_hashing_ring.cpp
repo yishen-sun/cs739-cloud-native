@@ -59,7 +59,9 @@ std::vector<std::string> ConsistentHashingRing::getReplicasNodes(const std::stri
             nodes_set.emplace(it->second);
             nodes_vec.push_back(it->second);
         }
-        i = (it->first)++;
+        // TODO: error
+        i = (it->first);
+        
     }
     
     return nodes_vec;

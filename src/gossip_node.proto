@@ -10,7 +10,7 @@ service GossipNodeService {
     rpc ClientGet(GetRequest) returns (GetResponse) {}
     rpc ClientPut(PutRequest) returns (PutResponse) {}
     rpc PeerGet(PeerGetRequest) returns (PeerGetResponse) {}
-    rpc PeerPut(PeerPutRequest) returns (peerPutResponse) {}
+    rpc PeerPut(PeerPutRequest) returns (PeerPutResponse) {}
 }
 
 message JoinRequest {
@@ -55,12 +55,12 @@ message GetRequest {
 }
 
 message GetResponse {
-    repeated Data = 1;
+    repeated Data get_res_data = 1;
 }
 
 message Data {
     string value = 1;
-    repeated ServerVersion = 2;
+    repeated ServerVersion version_info = 2;
 }
 
 message ServerVersion {

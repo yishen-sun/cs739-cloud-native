@@ -45,11 +45,11 @@ public:
   grpc::Status UpdateRing(grpc::ServerContext *context, const gossipnode::UpdateRingRequest *request, gossipnode::UpdateRingResponse *response) override;
   
   // write value in 3 physical node, receive more than 2 acknowledgement before return to clients
-  grpc::Status ClientPut(grpc::ServerContext *context, const gossipnode::PutgRequest *request, gossipnode::PutResponse *response) override;
+  grpc::Status ClientPut(grpc::ServerContext *context, const gossipnode::PutRequest *request, gossipnode::PutResponse *response) override;
   // read value from 3 replica, receive more than 2 acknowledgement before return to clients
   // data vector clock [[server_name, timestamp] ...] 
   grpc::Status ClientGet(grpc::ServerContext *context, const gossipnode::GetRequest *request, gossipnode::GetResponse *response) override;
-  grpc::Status ClientDelete(grpc::ServerContext *context, const gossipnode::DeleteRequest *request, gossipnode::DeleteResponse *response) override;
+  // grpc::Status ClientDelete(grpc::ServerContext *context, const gossipnode::DeleteRequest *request, gossipnode::DeleteResponse *response) override;
 
   grpc::Status PeerPut(grpc::ServerContext *context, const gossipnode::PeerPutRequest *request, gossipnode::PeerPutResponse *response) override;
   grpc::Status PeerGet(grpc::ServerContext *context, const gossipnode::PeerGetRequest *request, gossipnode::PeerGetResponse *response) override;
@@ -67,13 +67,13 @@ bucket name: vector clock
 */
 
 private:
-// std::string node_id_;
+std::string node_id_;
 std::string server_address_;
 ConsistentHashingRing ring_;
 // std::shared_ptr<grpc::Channel> channel_;
-unordered_map<std::string, std::shared_ptr<gossipnode::GossipNodeService::Stub>> stubs_; // key: server_addr, value: stub_
+std::unordered_map<std::string, std::shared_ptr<gossipnode::GossipNodeService::Stub>> stubs_; // key: server_addr, value: stub_
 void read_exists_servers(); // read configuration to initialize grpc stubs to all other servers
-void update_exists_servers(); // if the server is permernantly removed, modify the configuration.
+bool read_server_config_update_stubs_(); // if the server is permernantly removed, modify the configuration.
 //std::unique_ptr<gossipnode::GossipNodeService::Stub> stub_;
 
 
