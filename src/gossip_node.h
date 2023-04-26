@@ -27,8 +27,8 @@ public:
   void gossip();
   // send heartbeat to a set of random node
 
-  void peerPut();
-  void peerGet();
+  int peerPut(const std::string peer_server, const std::string key, const std::string value);
+  int peerGet(const std::string peer_server, const std::string key, std::string& value, std::vector<std::pair<std::string, uint64_t>>& vector_clock);
 
   // gRPC service method implementations
   grpc::Status JoinNetwork(grpc::ServerContext *context, const gossipnode::JoinRequest *request, gossipnode::JoinResponse *response) override;
@@ -51,7 +51,7 @@ public:
   grpc::Status ClientGet(grpc::ServerContext *context, const gossipnode::GetRequest *request, gossipnode::GetResponse *response) override;
   grpc::Status ClientDelete(grpc::ServerContext *context, const gossipnode::DeleteRequest *request, gossipnode::DeleteResponse *response) override;
 
-  grpc::Status PeerPut(grpc::ServerContext *context, const gossipnode::PeerPutgRequest *request, gossipnode::PeerPutResponse *response) override;
+  grpc::Status PeerPut(grpc::ServerContext *context, const gossipnode::PeerPutRequest *request, gossipnode::PeerPutResponse *response) override;
   grpc::Status PeerGet(grpc::ServerContext *context, const gossipnode::PeerGetRequest *request, gossipnode::PeerGetResponse *response) override;
 
 /*

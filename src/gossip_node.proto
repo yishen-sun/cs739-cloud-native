@@ -46,7 +46,7 @@ message UpdateRingResponse {
 }
 
 message KeyValuePair {
-    uint64 key = 1;
+    string key = 1;
     string value = 2;
 }
 
@@ -65,7 +65,7 @@ message Data {
 
 message ServerVersion {
     string server = 1;
-    int version = 2;
+    uint64 version = 2;
 }
 
 message PutRequest {
@@ -80,7 +80,7 @@ message PeerPutRequest {
     KeyValuePair data = 1;
 }
 
-message PeerPutRequest {
+message PeerPutResponse {
     bool success = 1;
 }
 
@@ -89,5 +89,5 @@ message PeerGetRequest {
 }
 
 message PeerGetResponse {
-    bool success = 1;
+    repeated Data = 1;
 }
