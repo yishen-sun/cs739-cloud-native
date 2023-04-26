@@ -7,6 +7,9 @@
 #include <map>
 #include <string>
 #include <chrono>
+#include <cstdlib>
+#include <ctime>
+#include <vector>
 
 const int RPELICA_N = 3;
 const int W_COUNT = 2;
@@ -84,6 +87,6 @@ bool read_server_config_update_stubs_(); // if the server is permernantly remove
 std::unordered_map<std::string, std::chrono::high_resolution_clock> members_heartbeat_list_;
 
 // storage interface
-std::unordered_map<size_t, std::string> storage;
+std::unordered_map<size_t, std::string> storage_;
 };
 #endif // GOSSIP_NODE_H

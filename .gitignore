@@ -2,8 +2,10 @@ aws-lambda-cpp
 aws-sdk-cpp
 example/build
 src/build
-
-
+build
+test_storage.txt
+grpc
+release
 
 # Prerequisites
 *.d

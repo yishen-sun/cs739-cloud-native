@@ -1,7 +1,4 @@
 #include "gossip_node.h"
-#include <cstdlib>
-#include <ctime>
-#include <vector>
 
 GossipNode::GossipNode(const std::string &node_id, int num_virtual_nodes, const std::string &server_address)
     : node_id_(node_id), server_address_(server_address), ring_(num_virtual_nodes) {
@@ -267,6 +264,6 @@ void GossipNode::updateRing(const std::map<size_t, std::string>& updated_ring) {
 // }
 
 //TODO: shutdown after complete
-int main() {
-  return 0;
-}
+// int main() {
+//   return 0;
+// }
