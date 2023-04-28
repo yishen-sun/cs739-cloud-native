@@ -69,12 +69,19 @@ target_link_libraries(consistent_hashing_ring_test
     ${_GRPC_GRPCPP}
     ${_PROTOBUF_LIBPROTOBUF}
     stdc++fs)
-# add_executable(gossip_node_test 
-#     gossip_node_test.cpp
-#     ${hw_proto_srcs}
-#     ${hw_grpc_srcs}
-#     gossip_node.cpp
-#     consistent_hashing_ring.cpp)
+
+add_executable(gossip_node_test 
+    gossip_node_test.cpp
+    ${hw_proto_srcs}
+    ${hw_grpc_srcs}
+    gossip_node.cpp
+    consistent_hashing_ring.cpp
+    state_machine.cpp)
+target_link_libraries(gossip_node_test
+    ${_REFLECTION}
+    ${_GRPC_GRPCPP}
+    ${_PROTOBUF_LIBPROTOBUF}
+    stdc++fs)
 
 add_executable(state_machine_test state_machine_test.cpp state_machine.cpp)
 

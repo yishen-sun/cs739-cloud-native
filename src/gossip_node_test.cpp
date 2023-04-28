@@ -17,10 +17,10 @@ int main(int argc, char *argv[]) {
   GossipNode node(node_id, num_virtual_nodes, server_address);
 
   // Join network through another node, if provided
-  if (argc == 5) {
-    std::string join_address = argv[4];
-    node.joinNetwork(join_address);
-  }
+  // if (argc == 5) {
+  //   std::string join_address = argv[4];
+  //   node.joinNetwork(join_address);
+  // }
 
   // Start gRPC server
   grpc::ServerBuilder builder;

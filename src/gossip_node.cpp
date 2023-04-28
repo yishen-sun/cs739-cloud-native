@@ -1,7 +1,7 @@
 #include "gossip_node.h"
 
 GossipNode::GossipNode(const std::string &node_id, int num_virtual_nodes, const std::string &server_address)
-    : node_id_(node_id), server_address_(server_address), ring_(num_virtual_nodes) {
+    : node_id_(node_id), server_address_(server_address), ring_(num_virtual_nodes), state_machine_(node_id + "storage.txt") {
   // srand(static_cast<unsigned int>(time(nullptr)));
   // channel_ = grpc::CreateChannel(server_address, grpc::InsecureChannelCredentials());
   // stub_ = gossipnode::GossipNodeService::NewStub(channel_);
@@ -96,6 +96,7 @@ grpc::Status GossipNode::ClientGet(grpc::ServerContext *context, const gossipnod
     for (auto server : replica_servers) {
       if (server == server_address_) {
           // state machine
+          results.push_back(std::make_pair(state_machine_.get_result(key), state_machine_.get_server_info(key)));
       } else {
         std::string value;
         std::vector<std::pair<std::string, uint64_t>> vector_clock;
@@ -217,7 +218,7 @@ void GossipNode::updateRing(const std::map<size_t, std::string>& updated_ring) {
 //   }
 }
 
-// void GossipNode::joinNetwork(const Address &other_node_address) {
+// void GossipNode::joinNetwork(const std::string &other_node_address) {
 //   // Connect to the other node and send a join request
 //   auto stub = gossipnode::GossipNodeService::NewStub(grpc::CreateChannel(other_node_address, grpc::InsecureChannelCredentials()));
 //   grpc::ClientContext context;
@@ -238,7 +239,7 @@ void GossipNode::updateRing(const std::map<size_t, std::string>& updated_ring) {
 
 // void GossipNode::gossip() {
 //   // Select random nodes from the membership list to gossip with
-//   std::vector<Address> random_nodes;
+//   std::vector<std::string> random_nodes;
 
 //   // TODO: Select random nodes from the membership list
 
@@ -252,7 +253,7 @@ void GossipNode::updateRing(const std::map<size_t, std::string>& updated_ring) {
 //     entry->set_timestamp(timestamp.time_since_epoch().count());
 //   }
 
-//   for (const Address &addr : random_nodes) {
+//   for (const std::string &addr : random_nodes) {
 //     grpc::ClientContext context;
 //     auto stub = stubs_[addr].get();
 //     grpc::Status status = stub->Gossip(&context, request, &response);
