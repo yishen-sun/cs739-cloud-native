@@ -20,7 +20,7 @@ public:
   GossipNode(const std::string &node_id, int num_virtual_nodes, const std::string &server_address);
 
 
-  void joinNetwork(const std::string &other_node_address);
+  void joinNetwork(const std::string &node_address);
   void leaveNetwork();
 
   // grpc gossip will call this function

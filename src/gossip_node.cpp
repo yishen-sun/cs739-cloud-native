@@ -35,19 +35,34 @@ bool GossipNode::read_server_config_update_stubs_() {
     return true;
 }
 
+void GossipNode::joinNetwork(const std::string &node_address) {
+  // Add myself to the ring and update membership list
+  ring_.addNode(node_address);
+  members_heartbeat_list_[node_address] = std::chrono::high_resolution_clock::now();
+  for (auto i : stubs_) {
+    grpc::ClientContext context;
+    gossipnode::JoinRequest request;
+    gossipnode::JoinResponse response;
+    request.set_node_id(node_address);
+    grpc::Status status = i.second->joinNetwork(&context, request, &response);
+    if (!status.ok()) {
+      std::cerr << "joinNetwork RPC failed: " << i.first << " " << status.error_message() << std::endl;
+    } else {
+      if (!response.success()) std::cout << "response is not success " << i.first << std::endl;
+    }
+
+  }
+  gossip(); // necessary?
+
+
+}
+
 grpc::Status GossipNode::JoinNetwork(grpc::ServerContext *context, const gossipnode::JoinRequest *request, gossipnode::JoinResponse *response) {
   // Add the joining node to the ring and update membership list
   ring_.addNode(request->node_id());
-  // TODO: Fix
-  // members_heartbeat_list_[request->node_id()] = std::chrono::high_resolution_clock::now();
+  members_heartbeat_list_[request->node_id()] = std::chrono::high_resolution_clock::now();
+  response->set_success(true);
 
-  // Update the joining node with the current ring data
-  // auto ring_data = getRingData();
-  // for (const auto &[hash, addr] : ring_data) {
-  //   auto entry = response->add_ring();
-  //   entry->set_hash(hash);
-  //   entry->set_server_address(addr);
-  // }
 
   return grpc::Status::OK;
 }
