@@ -2,6 +2,7 @@
 #define GOSSIP_NODE_H
 
 #include "consistent_hashing_ring.h"
+#include "state_machine.h"
 #include "gossip_node.grpc.pb.h"
 #include <grpcpp/grpcpp.h>
 #include <map>
@@ -73,6 +74,7 @@ private:
 std::string node_id_;
 std::string server_address_;
 ConsistentHashingRing ring_;
+StateMachine state_machine_;
 // std::shared_ptr<grpc::Channel> channel_;
 std::unordered_map<std::string, std::shared_ptr<gossipnode::GossipNodeService::Stub>> stubs_; // key: server_addr, value: stub_
 void read_exists_servers(); // read configuration to initialize grpc stubs to all other servers
