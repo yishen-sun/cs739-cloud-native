@@ -149,3 +149,20 @@ vector<pair<string, vector<pair<string, uint64_t>>>> StateMachine::get_latest_da
     latest_data = remove_unconflict_data(latest_data);
     return latest_data;
 }
+
+vector<pair<string, uint64_t>> StateMachine::update_version(const vector<pair<string, uint64_t>>& original_version, const string& server_name) {
+    vector<pair<string, uint64_t>> new_version;
+    bool server_record_exist = false;
+    for (const auto& version_pair : original_version) {
+        if (version_pair.first == server_name) {
+            server_record_exist = true;
+            new_version.push_back(make_pair(version_pair.first, version_pair.second + 1));
+        } else {
+            new_version.push_back(version_pair);
+        }
+    }
+    if (server_record_exist == false) {
+        new_version.push_back(make_pair(server_name, 1));
+    }
+    return new_version;
+}
