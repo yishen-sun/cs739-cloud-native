@@ -7,6 +7,9 @@
 #include <mutex>
 #include <string>
 #include <unordered_map>
+#include <utility>
+#include <unordered_set>
+
 using namespace std;
 
 const string NO_VALUE = "__NO_VALUE_";
@@ -23,6 +26,11 @@ public:
     vector<pair<string, uint64_t>> get_server_info(string key);
     string get_result(string key);
     void flush_to_disk();
+    int check_conflict_version(const vector<pair<string, uint64_t>>& incoming_version, const vector<pair<string, uint64_t>>& existing_version);
+    bool check_conflict_versions(const vector<pair<string, vector<pair<string, uint64_t>>>>& data_version);
+    vector<pair<string, vector<pair<string, uint64_t>>>> remove_duplicate_data(const vector<pair<string, vector<pair<string, uint64_t>>>>& version_vectors);
+    vector<pair<string, vector<pair<string, uint64_t>>>> get_latest_data(const vector<pair<string, vector<pair<string, uint64_t>>>>& original_vectors);
+    vector<pair<string, vector<pair<string, uint64_t>>>> remove_unconflict_data(const vector<pair<string, vector<pair<string, uint64_t>>>>& original_vectors);
 };
 
 #endif

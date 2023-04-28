@@ -49,3 +49,94 @@ void StateMachine::put(string key, string value, vector<pair<string, uint64_t>> 
     version_store_[key] = server_info;
     flush_to_disk();
 }
+
+
+int StateMachine::check_conflict_version(const vector<pair<string, uint64_t>>& incoming_vector, 
+                                        const vector<pair<string, uint64_t>>& existing_vector) {
+    //TODO: Bad performance !!!
+    // [["Server_a", 1], ["Server_b", 2], ...]
+    //  2: conflict
+    //  1: incoming is latest than existing
+    //  0: incoming is in the same time version as existing
+    // -1: incomding is earlier than exisiting
+    // corner case: empty existing
+
+    if (existing_vector.size() == 0) {
+        return 1;
+    }
+    if (incoming_vector.size() == 0) {
+        return -1;
+    }
+    int res = 0;
+    unordered_set<string> incoming_set;
+    for (const auto& incoming_pair : incoming_vector) incoming_set.insert(incoming_pair.first);
+    for (const auto& incoming_pair : incoming_vector) { 
+        for (const auto& existing_pair : existing_vector) {
+            if (incoming_set.find(existing_pair.first) == incoming_set.end()) {
+                return 2;
+            }
+            if (incoming_pair.first == existing_pair.first && incoming_pair.second < existing_pair.second) {
+                if (res == 1) return 2; // conflict because previous comparison show that incoming is the latest
+                res = -1;
+            }
+            if (incoming_pair.first == existing_pair.first && incoming_pair.second > existing_pair.second) {
+                if (res == -1) return 2; // conflict because previous comparison show that incoming is the earlier
+                res = 1;
+            }
+        }
+    }    
+
+    return res;
+}
+
+
+vector<pair<string, vector<pair<string, uint64_t>>>> StateMachine::remove_duplicate_data(
+    //TODO: Bad performance !!!
+    const vector<pair<string, vector<pair<string, uint64_t>>>>& version_vectors) {
+    
+    vector<pair<string, vector<pair<string, uint64_t>>>> unique_vectors;
+    for (auto& check_vector : version_vectors) {
+        bool is_duplicate = false;
+        for (auto& unique_vector : unique_vectors) {
+            if (check_vector.first == unique_vector.first && check_vector.second == unique_vector.second) {
+                is_duplicate = true;
+                break;
+            }
+        }
+        if (!is_duplicate) unique_vectors.push_back(check_vector);
+    }
+    return unique_vectors;
+}
+
+vector<pair<string, vector<pair<string, uint64_t>>>> StateMachine::remove_unconflict_data(
+    //TODO: Bad performance !!!
+    const vector<pair<string, vector<pair<string, uint64_t>>>>& original_vectors) {
+    
+    vector<pair<string, vector<pair<string, uint64_t>>>> possible_conflict_data;
+    bool is_old_data;
+    for (int i = 0; i < original_vectors.size(); i++) {
+        is_old_data = false;
+        for (int j = 0; j < original_vectors.size(); j ++) {
+            if (i != j) {
+                if (check_conflict_version(original_vectors[i].second, original_vectors[j].second) < 0) {
+                    is_old_data = true;
+                    break;
+                }
+            }
+        }
+        if (is_old_data == false) {
+            possible_conflict_data.push_back(original_vectors[i]);
+        }
+    }
+    return possible_conflict_data;
+}
+
+
+vector<pair<string, vector<pair<string, uint64_t>>>> StateMachine::get_latest_data(
+    const vector<pair<string, vector<pair<string, uint64_t>>>>& original_vectors) {
+        // remove duplicate
+    vector<pair<string, vector<pair<string, uint64_t>>>> latest_data;
+    latest_data = remove_duplicate_data(original_vectors);
+    latest_data = remove_unconflict_data(latest_data);
+    return latest_data;
+}
