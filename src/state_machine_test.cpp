@@ -10,8 +10,8 @@ int main() {
   cout << "Test case:  basic storage function ------------\n";
   // Test the put method
   sm.put("foo", "bar", {{"server1", 1}, {"server2", 2}});
-  assert(sm.get_result("foo") == "bar");
-  vector<pair<string, uint64_t>> result = sm.get_server_info("foo");
+  assert(sm.get_value("foo") == "bar");
+  vector<pair<string, uint64_t>> result = sm.get_version("foo");
 
   for (int i = 0; i < result.size(); i++) {
     cout << result[i].first << " " << result[i].second << endl;
@@ -24,8 +24,8 @@ int main() {
  
 
   // Test the remove method
-  sm.remove("foo", {{"server1", 1}});
-  cout << sm.get_result("foo") << endl;
+  sm.remove("foo"/*, {{"server1", 1}}*/);
+  cout << sm.get_value("foo") << endl;
 
   cout << endl;
   // Test case for check fonflict version

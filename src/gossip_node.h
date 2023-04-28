@@ -31,7 +31,7 @@ public:
   void gossip();
   // send heartbeat to a set of random node
 
-  int peerPut(const std::string peer_server, const std::string key, const std::string value);
+  int peerPut(const std::string peer_server, const std::string key, const std::string value, const vector<pair<string, uint64_t>> version);
   int peerGet(const std::string peer_server, const std::string key, std::string& value, std::vector<std::pair<std::string, uint64_t>>& vector_clock);
 
   // gRPC service method implementations
@@ -80,13 +80,13 @@ std::unordered_map<std::string, std::shared_ptr<gossipnode::GossipNodeService::S
 void read_exists_servers(); // read configuration to initialize grpc stubs to all other servers
 bool read_server_config_update_stubs_(); // if the server is permernantly removed, modify the configuration.
 //std::unique_ptr<gossipnode::GossipNodeService::Stub> stub_;
-
+std::vector<std::string> getTransferKey();
 
 // std::map<std::string, std::string> network_;
 // std::map<size_t, std::string> getRingData(); // ?????
 
 // membership heartbeat list
-std::unordered_map<std::string, std::chrono::high_resolution_clock> members_heartbeat_list_;
+std::unordered_map<std::string, std::chrono::time_point<std::chrono::high_resolution_clock>> members_heartbeat_list_;
 
 // storage interface
 std::unordered_map<size_t, std::string> storage_;

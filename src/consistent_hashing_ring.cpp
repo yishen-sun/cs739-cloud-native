@@ -1,8 +1,8 @@
 #include "consistent_hashing_ring.h"
 
 
-ConsistentHashingRing::ConsistentHashingRing(int num_virtual_nodes)
-    : num_virtual_nodes_(num_virtual_nodes) {}
+ConsistentHashingRing::ConsistentHashingRing(std::string myself_id, int num_virtual_nodes)
+    : myself_id(myself_id), num_virtual_nodes_(num_virtual_nodes) {}
 
 size_t ConsistentHashingRing::hashFunction(const std::string& key) {
     // output range [0, 2^64 - 1] = [0, 18,446,744,073,709,551,615].
@@ -71,4 +71,25 @@ void ConsistentHashingRing::printAllVirtualNode() {
     for (const auto& kv : ring_) {
         std::cout << "Key: " << kv.first << " Value: " << kv.second << std::endl;
     }
+}
+
+bool ConsistentHashingRing::checkDataBelonging(const std::string& key, int num_replicas) {
+    if (ring_.empty()) {
+        return false;
+    }
+    std::unordered_set<std::string> nodes_set;
+    size_t hash = hashFunction(key);
+    size_t i = hash;
+    while (nodes_set.size() < num_replicas) {
+        auto it = ring_.lower_bound(i);
+        if (it == ring_.end()) {
+            it = ring_.begin();
+        }
+        if (nodes_set.count(it->second) == 0) {
+            if (it->second == myself_id) return true;
+            nodes_set.emplace(it->second);
+        }
+        i = (it->first) + 1;
+    }
+    return false;
 }

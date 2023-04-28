@@ -1,7 +1,7 @@
 #include "consistent_hashing_ring.h"
 
 int main () {
-    ConsistentHashingRing chr(3);
+    ConsistentHashingRing chr("a",3);
     chr.printAllVirtualNode();
     chr.addNode("a");
     chr.printAllVirtualNode();
