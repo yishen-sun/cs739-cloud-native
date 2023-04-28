@@ -72,7 +72,8 @@ grpc::Status GossipNode::JoinNetwork(grpc::ServerContext *context, const gossipn
   members_heartbeat_list_[request->node_id()] = std::chrono::high_resolution_clock::now();
   std::vector<std::string> keys = getTransferKey();
   for (auto key : keys) {
-    int res = peerPut(request->node_id(), key, state_machine_.get_value(key), state_machine_.get_version(key));
+    vector<pair<string, uint64_t>> versions = state_machine_.get_version(key);
+    int res = peerPut(request->node_id(), key, state_machine_.get_value(key), versions);
     if (res > 0) state_machine_.remove(key);
   }
 
@@ -119,7 +120,7 @@ grpc::Status GossipNode::ClientGet(grpc::ServerContext *context, const gossipnod
     int success_cnt = 0;
     for (auto server : replica_servers) {
       if (server == server_address_) {
-          results.push_back(make_pair(state_machine_.get_result(key), state_machine_.get_server_info(key)));
+          results.push_back(make_pair(state_machine_.get_value(key), state_machine_.get_version(key)));
       } else {
         string value;
         vector<pair<string, uint64_t>> vector_clock;
@@ -191,7 +192,7 @@ grpc::Status GossipNode::PeerPut(grpc::ServerContext *context, const gossipnode:
   for (const auto& version_pair : request->data().version_info()) {
     new_version.push_back(make_pair(version_pair.server(), version_pair.version()));
   }
-  vector<pair<string, uint64_t>> old_version = state_machine_.get_server_info(key);
+  vector<pair<string, uint64_t>> old_version = state_machine_.get_version(key);
   response->set_success(0);
   if (state_machine_.check_conflict_version(new_version, old_version) == 1) {
     // only apply unconflict data
@@ -204,8 +205,8 @@ grpc::Status GossipNode::PeerPut(grpc::ServerContext *context, const gossipnode:
 grpc::Status GossipNode::PeerGet(grpc::ServerContext *context, const gossipnode::PeerGetRequest *request, gossipnode::PeerGetResponse *response) {
   // get result, put result into request results.
   string key = request->key();
-  string value = state_machine_.get_result(key);
-  std::vector<std::pair<std::string, uint64_t>> version_infos = state_machine_.get_server_info(key);
+  string value = state_machine_.get_value(key);
+  std::vector<std::pair<std::string, uint64_t>> version_infos = state_machine_.get_version(key);
 
   response->mutable_data()->set_value(value);
   for (const auto& version_info : version_infos) {
