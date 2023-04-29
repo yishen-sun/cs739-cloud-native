@@ -43,7 +43,7 @@ message KeyTimePair {
 }
 
 message UpdateRingRequest {
-    repeated KeyValuePair ring_data = 1;
+    string node_id = 1;
 }
 
 message UpdateRingResponse {

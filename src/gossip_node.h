@@ -31,7 +31,7 @@ public:
   void gossip();
   // send heartbeat to a set of random node
 
-  int peerPut(const std::string peer_server, const std::string key, const std::string& value, std::vector<std::pair<std::string, uint64_t>>& vector_clock);
+  int peerPut(const std::string peer_server, const std::string key, const std::string& value,const std::vector<std::pair<std::string, uint64_t>>& vector_clock);
   int peerGet(const std::string peer_server, const std::string key, std::string& value, std::vector<std::pair<std::string, uint64_t>>& vector_clock);
 
   // gRPC service method implementations

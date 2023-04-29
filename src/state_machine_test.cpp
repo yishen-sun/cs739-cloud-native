@@ -6,7 +6,7 @@
 using namespace std;
 
 int main() {
-  StateMachine sm("test_storage.txt");
+  StateMachine sm("test_storage.txt", "test_servers_addr.txt");
   cout << "Test case:  basic storage function ------------\n";
   // Test the put method
   sm.put("foo", "bar", {{"server1", 1}, {"server2", 2}});
