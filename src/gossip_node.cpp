@@ -13,7 +13,7 @@ bool GossipNode::read_server_config_update_stubs_() {
     // file format:
     // <name>/<addr> e.g. A/0.0.0.0:50001
     // TODO: link to S3
-    
+
     std::ifstream infile(config_path);
     std::string line;
     while (std::getline(infile, line)) {
@@ -75,14 +75,10 @@ grpc::Status GossipNode::JoinNetwork(grpc::ServerContext *context, const gossipn
   std::vector<std::string> keys = getTransferKey(request->node_id());
   response->set_success(true);
   for (auto key : keys) {
-<<<<<<< HEAD
+
     int res = peerPut(request->node_id(), key, state_machine_.get_value(key), state_machine_.get_version(key));
     if (res < 0) response->set_success(false);
-=======
-    vector<pair<string, uint64_t>> versions = state_machine_.get_version(key);
-    int res = peerPut(request->node_id(), key, state_machine_.get_value(key), versions);
-    if (res > 0) state_machine_.remove(key);
->>>>>>> 69c2f098be4ff84c4af22831330ed5ca189ad866
+
   }
   return grpc::Status::OK;
 }
