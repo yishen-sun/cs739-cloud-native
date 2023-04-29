@@ -1,7 +1,18 @@
 #include "state_machine.h"
 
-StateMachine::StateMachine(std::string storage_name) : storage_name(storage_name) {};
+StateMachine::StateMachine(std::string storage_name, std::string nodes_config) : storage_name(storage_name), nodes_config_(nodes_config) {}
 
+vector<string> get_nodes_config() {
+    vector<string> server_addrs;
+    std::ifstream file(nodes_config_);
+    if (file.is_open()) {
+        std::string line;
+        while (std::getline(file, line)) {
+            server_addrs.push_back(line);
+        }
+    }
+    return server_addrs;
+}
 
 void StateMachine::flush_to_disk() {
     ofstream file(storage_name);

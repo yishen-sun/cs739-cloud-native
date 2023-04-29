@@ -21,11 +21,11 @@ public:
   GossipNode(const std::string &node_id, int num_virtual_nodes, const std::string &server_address);
 
 
-  void joinNetwork(const std::string &node_address);
+  bool joinNetwork(const std::string &node_address);
   void leaveNetwork();
 
   // grpc gossip will call this function
-  void updateRing(const std::map<size_t, std::string> &updated_ring);
+  bool updateRing();
   
   // send members_heartbeat_list_ to other node
   void gossip();
@@ -80,7 +80,7 @@ std::unordered_map<std::string, std::shared_ptr<gossipnode::GossipNodeService::S
 void read_exists_servers(); // read configuration to initialize grpc stubs to all other servers
 bool read_server_config_update_stubs_(); // if the server is permernantly removed, modify the configuration.
 //std::unique_ptr<gossipnode::GossipNodeService::Stub> stub_;
-std::vector<std::string> getTransferKey();
+std::vector<std::string> getTransferKey(const std::string &node_id, int num_replicas);
 
 // std::map<std::string, std::string> network_;
 // std::map<size_t, std::string> getRingData(); // ?????
