@@ -2,18 +2,18 @@
 
 StateMachine::StateMachine(std::string storage_name, std::string nodes_config) : storage_name(storage_name), nodes_config_(nodes_config) {}
 
-vector<string> StateMachine::get_nodes_config() {
-    vector<string> server_addrs;
+unordered_set<string> StateMachine::get_nodes_config() {
+    unordered_set<string> server_addrs;
     std::ifstream file(nodes_config_);
     if (file.is_open()) {
         std::string line;
         while (std::getline(file, line)) {
-            server_addrs.push_back(line);
+            server_addrs.emplace(line);
         }
     }
     return server_addrs;
 }
-void StateMachine::write_nodes_config(std::vector<std::string> config) {
+void StateMachine::write_nodes_config(std::unordered_set<std::string> config) {
     ofstream file(nodes_config_);
     if (!file.is_open()) {
         cout << "Error opening file " << nodes_config_ << " for writing" << endl;

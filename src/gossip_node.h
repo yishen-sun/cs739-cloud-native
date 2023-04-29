@@ -78,7 +78,7 @@ StateMachine state_machine_;
 // std::shared_ptr<grpc::Channel> channel_;
 std::unordered_map<std::string, std::shared_ptr<gossipnode::GossipNodeService::Stub>> stubs_; // key: server_addr, value: stub_
 void read_exists_servers(); // read configuration to initialize grpc stubs to all other servers
-std::vector<std::string> read_server_config_update_stubs_(); // if the server is permernantly removed, modify the configuration.
+std::unordered_set<std::string> read_server_config_update_stubs_(); // if the server is permernantly removed, modify the configuration.
 bool is_coordinator(vector<string>& quorum_member);
 //std::unique_ptr<gossipnode::GossipNodeService::Stub> stub_;
 std::vector<std::string> getTransferKey(const std::string &node_id, int num_replicas);

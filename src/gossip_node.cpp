@@ -5,16 +5,17 @@ GossipNode::GossipNode(const std::string &node_id, int num_virtual_nodes, const 
   // srand(static_cast<unsigned int>(time(nullptr)));
   // channel_ = grpc::CreateChannel(server_address, grpc::InsecureChannelCredentials());
   // stub_ = gossipnode::GossipNodeService::NewStub(channel_);
-  std::vector<std::string> res = read_server_config_update_stubs_();
+  std::unordered_set<std::string> res = read_server_config_update_stubs_();
+  joinNetwork();
   state_machine_.write_nodes_config(res);
 }
 
 
-std::vector<std::string> GossipNode::read_server_config_update_stubs_() {
+std::unordered_set<std::string> GossipNode::read_server_config_update_stubs_() {
     // file format:
     // <name>/<addr> e.g. A/0.0.0.0:50001
     // TODO: link to S3
-    std::vector<std::string> server_config = state_machine_.get_nodes_config();
+    std::unordered_set<std::string> server_config = state_machine_.get_nodes_config();
     // std::ifstream infile(config_path);
     // std::string line;
     // while (std::getline(infile, line)) {
@@ -28,26 +29,28 @@ std::vector<std::string> GossipNode::read_server_config_update_stubs_() {
     stubs_.clear();
     for (const auto& addr : server_config) {
         if (addr != node_id_) {
-            stubs_[addr] =
+          ring_.addNode(addr);
+          stubs_[addr] =
                 gossipnode::GossipNodeService::NewStub(grpc::CreateChannel(addr, grpc::InsecureChannelCredentials()));
         }
     }
-    server_config.push_back(node_id_);
+    server_config.emplace(node_id_);
     return server_config;
 }
 
 std::vector<std::string> GossipNode::getTransferKey(const std::string &node_id, int num_replicas) {
-  ConsistentHashingRing tmp_ring(ring_);
-  tmp_ring.addNode(node_id);
   std::vector<std::string> all_keys = state_machine_.get_all_keys();
   std::vector<std::string> filtered_keys;
   for (auto keys : all_keys) {
-    if (tmp_ring.checkDataBelonging(keys, num_replicas) == false) filtered_keys.push_back(keys);
+    if (ring_.checkDataBelonging(keys, num_replicas) == false) filtered_keys.push_back(keys);
   }
   return filtered_keys;
 }
 
 bool GossipNode::joinNetwork() {
+  std::cout << "send joinNetwork RPC" << std::endl;
+  // Add myself to the ring
+  ring_.addNode(node_id_);
   bool flag = true;
   for (auto i : stubs_) {
     grpc::ClientContext context;
@@ -63,15 +66,17 @@ bool GossipNode::joinNetwork() {
       flag = false;
     }
   }
-
-  if (flag) {
-    flag = updateRing();
-  }
+  ring_.printAllVirtualNode();
   return flag;
   // gossip(); // necessary?
 }
 
 grpc::Status GossipNode::JoinNetwork(grpc::ServerContext *context, const gossipnode::JoinRequest *request, gossipnode::JoinResponse *response) {
+  std::cout << "receive joinNetwork RPC" << std::endl;
+  // Add the joining node to the ring and update membership list
+  ring_.addNode(request->node_id());
+  //members_heartbeat_list_[request->node_id()] = std::chrono::high_resolution_clock::now();
+
   std::vector<std::string> keys = getTransferKey(request->node_id(), RPELICA_N);
   response->set_success(true);
   for (auto key : keys) {
@@ -80,9 +85,11 @@ grpc::Status GossipNode::JoinNetwork(grpc::ServerContext *context, const gossipn
       response->set_success(false);
     }
     if (res == 0) {
-      node_transfer_keys_[request->node_id()].push_back(key);
+      state_machine_.remove(key);
+      //node_transfer_keys_[request->node_id()].push_back(key);
     }
   }
+  ring_.printAllVirtualNode();
   return grpc::Status::OK;
 }
 
@@ -118,13 +125,13 @@ bool GossipNode::updateRing() {
 
 grpc::Status GossipNode::UpdateRing(grpc::ServerContext *context, const gossipnode::UpdateRingRequest *request, gossipnode::UpdateRingResponse *response) {
   // Add the joining node to the ring and update membership list
-  ring_.addNode(request->node_id());
+  // ring_.addNode(request->node_id());
   //members_heartbeat_list_[request->node_id()] = std::chrono::high_resolution_clock::now();
-  for(std::string key : node_transfer_keys_[request->node_id()]) {
-    state_machine_.remove(key);
-  }
-  node_transfer_keys_.erase(request->node_id());
-  response->set_success(true);
+  // for(std::string key : node_transfer_keys_[request->node_id()]) {
+  //   state_machine_.remove(key);
+  // }
+  // node_transfer_keys_.erase(request->node_id());
+  // response->set_success(true);
   return grpc::Status::OK;
 }
 

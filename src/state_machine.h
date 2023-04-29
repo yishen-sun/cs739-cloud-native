@@ -22,8 +22,8 @@ private:
     unordered_map<string, vector<pair<string, uint64_t>>> version_store_;
 public:
     StateMachine(string storage_name, string nodes_config_);
-    vector<string> get_nodes_config();
-    void write_nodes_config(std::vector<std::string> config);
+    unordered_set<string> get_nodes_config();
+    void write_nodes_config(std::unordered_set<std::string> config);
     void put(string key, string value, vector<pair<string, uint64_t>> server_info);
     void remove(string key/*, vector<pair<string, uint64_t>> server_info*/);
     vector<pair<string, uint64_t>> get_version(string key);
