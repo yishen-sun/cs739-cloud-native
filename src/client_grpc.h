@@ -9,6 +9,8 @@
 #include <string>
 #include <thread>
 #include "gossip_node.grpc.pb.h"
+#include "state_machine.h"
+using namespace std;
 
 
 // using grpc::Channel;
@@ -24,19 +26,21 @@
 
 class KeyValueStoreClient {
    public:
-    KeyValueStoreClient(std::string config_pat, std::string asigned_port);
+    KeyValueStoreClient(string config_path, string asigned_port);
 
-    bool Put(const std::string& key, const std::string& value);
+    bool Put(const string& key, const string& value);
 
-    bool Get(const std::string& key, std::string& result);
+    bool Get(const string& key, string& result);
 
    private:
-    std::unique_ptr<gossipnode::GossipNodeService::Stub> stub_;
-    std::shared_ptr<grpc::Channel> channel_;
-    std::string config_path;
-    std::string assigned_port;
-    std::unordered_map<std::string, std::string> server_config;  // k = name A, v = addr:port 0.0.0.0:50001
+    unique_ptr<gossipnode::GossipNodeService::Stub> stub_;
+    shared_ptr<grpc::Channel> channel_;
+    string config_path;
+    string assigned_port;
+    unordered_map<string, string> server_config;  // k = name A, v = addr:port 0.0.0.0:50001
     bool read_server_config();
     void random_pick_server();
     int rand_between(int start, int end);
+    StateMachine state_machine_;
+    void reconcile(vector<pair<string, vector<pair<string, uint64_t>>>> conflict_versions, string key, string& result);
 };
