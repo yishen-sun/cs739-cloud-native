@@ -16,6 +16,16 @@ bool KeyValueStoreClient::Put(const string& key, const string& value) {
     grpc::ClientContext context;
     gossipnode::PutRequest request;
     gossipnode::PutResponse response;
+    request.set_key(key);
+   
+    auto& data = *(request.mutable_data());
+    data.set_value(value);
+    state_machine_.get_version(key);
+    for (const auto& version_pair : vector_clock) {
+      auto& version_info = *(data.add_version_info());
+      version_info.set_server(version_pair.first);
+      version_info.set_version(version_pair.second);
+    }
     
     
     // // context.set_deadline(chrono::system_clock::now() + chrono::milliseconds(100));
@@ -117,10 +127,13 @@ void KeyValueStoreClient::reconcile(vector<pair<string, vector<pair<string, uint
     }
     cout << "Select which version do you want to keep" << endl;
     int selected;
+    vector<pair<string, uint64_t>> reconcile_version = state_machine_.reconcile_version(conflict_versions);
+
     while (true) {
         cin >> selected;
         if (selected >= 0 && selected < conflict_versions.size()) {
             result = conflict_versions[selected].first;
+            state_machine_.put(key, result, reconcile_version);
             Put(key, result);
             return;
         }

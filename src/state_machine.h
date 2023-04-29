@@ -37,6 +37,7 @@ public:
     vector<pair<string, vector<pair<string, uint64_t>>>> remove_unconflict_data(const vector<pair<string, vector<pair<string, uint64_t>>>>& original_vectors);
     
     vector<pair<string, uint64_t>> update_version(const vector<pair<string, uint64_t>>& original_version, const string& server_name);
+    vector<pair<string, uint64_t>> reconcile_version(vector<pair<string, vector<pair<string, uint64_t>>>> conflict_versions);
 };
 
 #endif
