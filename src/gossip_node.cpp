@@ -1,13 +1,20 @@
 #include "gossip_node.h"
 
-GossipNode::GossipNode(const std::string &node_id, int num_virtual_nodes, const std::string &server_address)
-    : node_id_(node_id), server_address_(server_address), ring_(node_id, num_virtual_nodes), state_machine_(node_id + "storage.txt", "servers_addr.txt") {
+GossipNode::GossipNode(const std::string &node_id, int num_virtual_nodes, const std::string &server_address, const std::string& config_path)
+    : node_id_(node_id), server_address_(server_address), ring_(node_id, num_virtual_nodes), state_machine_(node_id + "_storage.txt", config_path) {
   // srand(static_cast<unsigned int>(time(nullptr)));
   // channel_ = grpc::CreateChannel(server_address, grpc::InsecureChannelCredentials());
   // stub_ = gossipnode::GossipNodeService::NewStub(channel_);
   std::unordered_set<std::string> res = read_server_config_update_stubs_();
-  joinNetwork();
-  state_machine_.write_nodes_config(res);
+  
+  if (FIXED_CONFIG_TEST == true) {
+    ring_.addNode(node_id_);
+    ring_.printAllVirtualNode();
+  } else {
+    
+    joinNetwork();
+    state_machine_.write_nodes_config(res);
+  }
 }
 
 
@@ -157,9 +164,11 @@ grpc::Status GossipNode::Gossip(grpc::ServerContext *context, const gossipnode::
 
 
 grpc::Status GossipNode::ClientGet(grpc::ServerContext *context, const gossipnode::GetRequest *request, gossipnode::GetResponse *response) {
+    cout << "trigger Client get" << endl;
     // read value from 3 replica, receive more than 2 acknowledgement before return to clients
     // data vector clock [[server_name, timestamp] ...] 
     string key = request->key();
+    cout << "key: " << key << " hash: " << ring_.hashFunction(key) << endl;
     vector<string> replica_servers = ring_.getReplicasNodes(key, RPELICA_N);
     vector<pair<string, vector<pair<string, uint64_t>>>> results;
     // format: [D1, [[s1, 1], [s2, 2], [s3, 1]]]
@@ -196,10 +205,16 @@ grpc::Status GossipNode::ClientGet(grpc::ServerContext *context, const gossipnod
 }
 
 grpc::Status GossipNode::ClientPut(grpc::ServerContext *context, const gossipnode::PutRequest *request, gossipnode::PutResponse *response) {
+  cout << "trigger client put " << endl;
   // write value in 3 physical node, receive more than 2 acknowledgement before return to clients
   std::string key = request->key();
   std::string value = request->data().value();
   vector<pair<string, uint64_t>> versions;
+  for (const auto& version_info : request->data().version_info()) {
+    versions.push_back(make_pair(version_info.server(), version_info.version()));
+  }
+
+  cout << "PUT: key: " << key << " hash: " << ring_.hashFunction(key) << endl;
 
   std::vector<std::string> replica_servers = ring_.getReplicasNodes(key, RPELICA_N);
   bool check_coordinator = is_coordinator(replica_servers);
@@ -208,11 +223,14 @@ grpc::Status GossipNode::ClientPut(grpc::ServerContext *context, const gossipnod
     response->set_ret(gossipnode::PutReturn::NOT_COORDINATOR);
     return grpc::Status::OK;
   }
-
-  if (request->data().version_info().size() == 0) {
-    response->set_ret(gossipnode::PutReturn::NO_VERSION);
-    return grpc::Status::OK;
-  }
+  /* 
+    remove this part because the client must read data before sending requests.
+    It may be the new data without version info.
+  */ 
+  // if (request->data().version_info().size() == 0) {
+  //   response->set_ret(gossipnode::PutReturn::NO_VERSION);
+  //   return grpc::Status::OK;
+  // }
   int success_cnt = 0;
   vector<pair<string, uint64_t>> new_version = state_machine_.update_version(versions, node_id_);
   for (const auto& peer_server : replica_servers) {
@@ -225,12 +243,15 @@ grpc::Status GossipNode::ClientPut(grpc::ServerContext *context, const gossipnod
   if (success_cnt > W_COUNT) {
     response->set_ret(gossipnode::PutReturn::OK);
   }  else {
+
+    cout << "success count" << success_cnt << endl;
     response->set_ret(gossipnode::PutReturn::FAILED);
   }
   return grpc::Status::OK;
 }
 
 grpc::Status GossipNode::PeerPut(grpc::ServerContext *context, const gossipnode::PeerPutRequest *request, gossipnode::PeerPutResponse *response) {
+  cout << "Received Peerput " << endl;
   // put result into rings
   string key = request->key();
   string value = request->data().value();
@@ -239,16 +260,23 @@ grpc::Status GossipNode::PeerPut(grpc::ServerContext *context, const gossipnode:
     new_version.push_back(make_pair(version_pair.server(), version_pair.version()));
   }
   vector<pair<string, uint64_t>> old_version = state_machine_.get_version(key);
-  response->set_success(0);
+  response->set_success(1);
+  cout << "inside peer put ------" << endl;
+  print_version(new_version);
+  cout << "old version: ----" << endl;
+  print_version(old_version);
+  
   if (state_machine_.check_conflict_version(new_version, old_version) == 1) {
     // only apply unconflict data
     state_machine_.put(key, value, new_version);
-    response->set_success(1);
+    response->set_success(0);
+    cout << "inside peer put: applied log: " << key << " " << value << endl;
   }
   return grpc::Status::OK;
 }
 
 grpc::Status GossipNode::PeerGet(grpc::ServerContext *context, const gossipnode::PeerGetRequest *request, gossipnode::PeerGetResponse *response) {
+  cout << "Received PeerGet" << endl;
   // get result, put result into request results.
   string key = request->key();
   string value = state_machine_.get_value(key);
@@ -264,6 +292,7 @@ grpc::Status GossipNode::PeerGet(grpc::ServerContext *context, const gossipnode:
 }
 
 int GossipNode::peerPut(const string peer_server, const string key, const string& value, const vector<pair<string, uint64_t>>& vector_clock) {
+    cout << "Send peer put" << endl;
     auto stub = stubs_[peer_server];
     grpc::ClientContext context;
     gossipnode::PeerPutRequest request;
@@ -284,6 +313,7 @@ int GossipNode::peerPut(const string peer_server, const string key, const string
 };
 
 int GossipNode::peerGet(const string peer_server, const string key, string& value, vector<pair<string, uint64_t>>& vector_clock) {
+    cout << "sent peerget to:" << peer_server << endl;
     auto stub = stubs_[peer_server];
     grpc::ClientContext context;
     gossipnode::PeerGetRequest request;
@@ -353,3 +383,9 @@ bool GossipNode::is_coordinator(vector<string>& quorum_member) {
 // int main() {
 //   return 0;
 // }
+
+void GossipNode::print_version(vector<pair<string, uint64_t>> versions) {
+  for (const auto& v : versions) {
+    cout << "Server: " << v.first << " Version: " << v.second << endl;
+  }
+}

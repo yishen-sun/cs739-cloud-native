@@ -52,7 +52,8 @@ add_executable(client_cli
     client_cli.cpp
     ${hw_proto_srcs}
     ${hw_grpc_srcs}
-    client_grpc.cpp)
+    client_grpc.cpp
+    state_machine.cpp)
 target_link_libraries(client_cli
     ${_REFLECTION}
     ${_GRPC_GRPCPP}
