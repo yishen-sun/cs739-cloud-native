@@ -13,6 +13,18 @@ vector<string> StateMachine::get_nodes_config() {
     }
     return server_addrs;
 }
+void StateMachine::write_nodes_config(std::vector<std::string> config) {
+    ofstream file(nodes_config_);
+    if (!file.is_open()) {
+        cout << "Error opening file " << nodes_config_ << " for writing" << endl;
+        return;
+    }
+    for (const auto& addr : config) {
+        file << addr << "\n";
+    }
+    file.flush();
+    file.close();
+}
 
 void StateMachine::flush_to_disk() {
     ofstream file(storage_name);
