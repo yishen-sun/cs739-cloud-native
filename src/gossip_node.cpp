@@ -201,11 +201,14 @@ grpc::Status GossipNode::ClientPut(grpc::ServerContext *context, const gossipnod
     response->set_ret(gossipnode::PutReturn::NOT_COORDINATOR);
     return grpc::Status::OK;
   }
-
-  if (request->data().version_info().size() == 0) {
-    response->set_ret(gossipnode::PutReturn::NO_VERSION);
-    return grpc::Status::OK;
-  }
+  /* 
+    remove this part because the client must read data before sending requests.
+    It may be the new data without version info.
+  */ 
+  // if (request->data().version_info().size() == 0) {
+  //   response->set_ret(gossipnode::PutReturn::NO_VERSION);
+  //   return grpc::Status::OK;
+  // }
   int success_cnt = 0;
   vector<pair<string, uint64_t>> new_version = state_machine_.update_version(versions, node_id_);
   for (const auto& peer_server : replica_servers) {

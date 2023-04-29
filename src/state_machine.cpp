@@ -74,6 +74,7 @@ void StateMachine::remove(string key/*, vector<pair<string, uint64_t>> server_in
     //version_store_[key] = server_info;
     value_store_.erase(key);
     version_store_.erase(key);
+    flush_to_disk();
 }
 
 void StateMachine::put(string key, string value, vector<pair<string, uint64_t>> server_info) {
@@ -207,4 +208,5 @@ vector<pair<string, uint64_t>> StateMachine::reconcile_version(vector<pair<strin
     for (const auto& server : existing_server) {
         result_vector.push_back(make_pair(server, mapping_version[server]));
     }
+    return result_vector;
 }

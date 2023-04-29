@@ -20,28 +20,38 @@ bool KeyValueStoreClient::Put(const string& key, const string& value) {
    
     auto& data = *(request.mutable_data());
     data.set_value(value);
-    state_machine_.get_version(key);
-    for (const auto& version_pair : vector_clock) {
+
+    string result;
+    bool success;
+    do {
+        success = Get(key, result); 
+    } while (success != true);
+
+    for (const auto& version_pair : state_machine_.get_version(key)) {
       auto& version_info = *(data.add_version_info());
       version_info.set_server(version_pair.first);
       version_info.set_version(version_pair.second);
     }
     
     
-    // // context.set_deadline(chrono::system_clock::now() + chrono::milliseconds(100));
-    // grpc::Status status = stub_->ClientPut(&context, request, &response);
-    // if (status.ok()) {
-    //     if (response.success()) {
-    //         cout << "Put return status is ok, response true" << endl;
-    //     } else {
-    //         cout << "Put return status is ok, response false" << endl;
-    //     }
-    //     return true;
+    // context.set_deadline(chrono::system_clock::now() + chrono::milliseconds(100));
+    grpc::Status status = stub_->ClientPut(&context, request, &response);
+    if (status.ok()) {
+        if (response.ret() == gossipnode::PutReturn::OK) {
+            cout << "Put return status is ok, response true" << endl;
+        } else if (response.ret() == gossipnode::PutReturn::FAILED) {
+            return false;
+        } else if (response.ret() == gossipnode::PutReturn::NOT_COORDINATOR) {
+            // update channel to the coordinator
+            update_channel_to_coordinator(response.coordinator());
+            return Put(key, value);
+        }
+        return true;
 
-    // } else {
-    //     cerr << "Put RPC failed: " << status.error_message() << endl;
-    //     return false;
-    // }
+    } else {
+        cerr << "Put RPC failed: " << status.error_message() << endl;
+        return false;
+    }
     return true;
 }
 
@@ -102,6 +112,15 @@ void KeyValueStoreClient::random_pick_server() {
     stub_ = gossipnode::GossipNodeService::NewStub(channel_);
 }
 
+void KeyValueStoreClient::update_channel_to_coordinator(string coordinator) {
+    grpc::ChannelArguments channel_args;
+    channel_args.SetInt(GRPC_ARG_MAX_RECEIVE_MESSAGE_LENGTH, INT_MAX);
+    
+    channel_ = grpc::CreateCustomChannel(server_config[coordinator], grpc::InsecureChannelCredentials(),
+                                         channel_args);
+    stub_ = gossipnode::GossipNodeService::NewStub(channel_);
+}
+
 int KeyValueStoreClient::rand_between(int start, int end) {
     static random_device rd;
     static mt19937 gen(rd());
@@ -117,6 +136,7 @@ void KeyValueStoreClient::reconcile(vector<pair<string, vector<pair<string, uint
     }
     if (conflict_versions.size() == 1) {
         result = conflict_versions[0].first;
+        state_machine_.put(key, result, conflict_versions[0].second);
         return;
     }
     int i = 0;
