@@ -12,28 +12,28 @@ KeyValueStoreClient::KeyValueStoreClient(std::string config_path, std::string as
 }
 
 bool KeyValueStoreClient::Put(const std::string& key, const std::string& value) {
-    grpc::ClientContext context;
-    gossipnode::PutRequest request;
-    gossipnode::PutResponse response;
-    auto& data = *(request.mutable_data());
-    data.set_key(key);
-    data.set_value(value);
+    // grpc::ClientContext context;
+    // gossipnode::PutRequest request;
+    // gossipnode::PutResponse response;
+    // auto& data = *(request.mutable_data());
+    // data.set_key(key);
+    // data.set_value(value);
     
-    // context.set_deadline(std::chrono::system_clock::now() + std::chrono::milliseconds(100));
-    grpc::Status status = stub_->ClientPut(&context, request, &response);
-    if (status.ok()) {
-        if (response.success()) {
-            std::cout << "Put return status is ok, response true" << std::endl;
-        } else {
-            std::cout << "Put return status is ok, response false" << std::endl;
-        }
-        return true;
+    // // context.set_deadline(std::chrono::system_clock::now() + std::chrono::milliseconds(100));
+    // grpc::Status status = stub_->ClientPut(&context, request, &response);
+    // if (status.ok()) {
+    //     if (response.success()) {
+    //         std::cout << "Put return status is ok, response true" << std::endl;
+    //     } else {
+    //         std::cout << "Put return status is ok, response false" << std::endl;
+    //     }
+    //     return true;
 
-    } else {
-        std::cerr << "Put RPC failed: " << status.error_message() << std::endl;
-        return false;
-    }
-    
+    // } else {
+    //     std::cerr << "Put RPC failed: " << status.error_message() << std::endl;
+    //     return false;
+    // }
+    return true;
 }
 
 bool KeyValueStoreClient::Get(const std::string& key, std::string& result) {

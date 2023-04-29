@@ -31,7 +31,7 @@ public:
   void gossip();
   // send heartbeat to a set of random node
 
-  int peerPut(const std::string peer_server, const std::string key, const std::string value, const vector<pair<string, uint64_t>> version);
+  int peerPut(const std::string peer_server, const std::string key, const std::string& value, std::vector<std::pair<std::string, uint64_t>>& vector_clock);
   int peerGet(const std::string peer_server, const std::string key, std::string& value, std::vector<std::pair<std::string, uint64_t>>& vector_clock);
 
   // gRPC service method implementations
@@ -79,6 +79,7 @@ StateMachine state_machine_;
 std::unordered_map<std::string, std::shared_ptr<gossipnode::GossipNodeService::Stub>> stubs_; // key: server_addr, value: stub_
 void read_exists_servers(); // read configuration to initialize grpc stubs to all other servers
 bool read_server_config_update_stubs_(); // if the server is permernantly removed, modify the configuration.
+bool is_coordinator(vector<string>& quorum_member);
 //std::unique_ptr<gossipnode::GossipNodeService::Stub> stub_;
 std::vector<std::string> getTransferKey(const std::string &node_id, int num_replicas);
 

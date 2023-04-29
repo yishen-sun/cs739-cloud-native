@@ -61,6 +61,7 @@ message GetRequest {
 
 message GetResponse {
     repeated Data get_res_data = 1;
+    string coordinator = 2;
 }
 
 message Data {
@@ -74,15 +75,26 @@ message ServerVersion {
 }
 
 message PutRequest {
-    KeyValuePair data = 1;
+    string key = 1;
+    Data data = 2;
+}
+
+
+enum PutReturn {
+    OK = 0;
+    FAILED = 1;
+    NOT_COORDINATOR = 2;
+    NO_VERSION = 3;
 }
 
 message PutResponse {
-    bool success = 1;
+    PutReturn ret = 1;
+    string coordinator = 2;
 }
 
 message PeerPutRequest {
-    KeyValuePair data = 1;
+    string key = 1;
+    Data data = 2;
 }
 
 message PeerPutResponse {

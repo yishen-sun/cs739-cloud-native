@@ -34,6 +34,8 @@ public:
     vector<pair<string, vector<pair<string, uint64_t>>>> remove_duplicate_data(const vector<pair<string, vector<pair<string, uint64_t>>>>& version_vectors);
     vector<pair<string, vector<pair<string, uint64_t>>>> get_latest_data(const vector<pair<string, vector<pair<string, uint64_t>>>>& original_vectors);
     vector<pair<string, vector<pair<string, uint64_t>>>> remove_unconflict_data(const vector<pair<string, vector<pair<string, uint64_t>>>>& original_vectors);
+    
+    vector<pair<string, uint64_t>> update_version(const vector<pair<string, uint64_t>>& original_version, const string& server_name);
 };
 
 #endif
