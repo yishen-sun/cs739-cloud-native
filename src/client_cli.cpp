@@ -31,6 +31,7 @@ int main(int argc, char** argv) {
             }
         } else if (command == "get") {
             iss >> key;
+            cout << "get: " << key << endl;
             if (kv.Get(key, result)) {
                 if (result.size() == 0) {
                     std::cout << "key doesn't exist" << std::endl;

@@ -16,9 +16,11 @@ const int RPELICA_N = 3;
 const int W_COUNT = 2;
 const int R_COUNT = 2;
 
+const bool FIXED_CONFIG_TEST = true;
+
 class GossipNode : public gossipnode::GossipNodeService::Service {
 public:
-  GossipNode(const std::string &node_id, int num_virtual_nodes, const std::string &server_address);
+  GossipNode(const std::string &node_id, int num_virtual_nodes, const std::string &server_address, const std::string& config_path);
 
 
   bool joinNetwork();
@@ -96,5 +98,7 @@ std::unordered_map<size_t, std::string> storage_;
 
 // alive status
 bool alive_;
+
+void print_version(vector<pair<string, uint64_t>> versions);
 };
 #endif // GOSSIP_NODE_H

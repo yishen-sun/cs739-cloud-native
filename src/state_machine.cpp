@@ -74,6 +74,7 @@ void StateMachine::remove(string key/*, vector<pair<string, uint64_t>> server_in
     //version_store_[key] = server_info;
     value_store_.erase(key);
     version_store_.erase(key);
+    flush_to_disk();
 }
 
 void StateMachine::put(string key, string value, vector<pair<string, uint64_t>> server_info) {
@@ -188,4 +189,24 @@ vector<pair<string, uint64_t>> StateMachine::update_version(const vector<pair<st
         new_version.push_back(make_pair(server_name, 1));
     }
     return new_version;
+}
+
+vector<pair<string, uint64_t>> StateMachine::reconcile_version(vector<pair<string, vector<pair<string, uint64_t>>>> conflict_versions) {
+    vector<pair<string, uint64_t>> result_vector;
+    unordered_set<string> existing_server;
+    unordered_map<string, uint64_t> mapping_version;
+    for (const auto& value_version_pair : conflict_versions) {
+        for (const auto& version_pair : value_version_pair.second) {
+            if (existing_server.find(version_pair.first) == existing_server.end()) {
+                existing_server.insert(version_pair.first);
+                mapping_version[version_pair.first] = version_pair.second;
+            } else {
+                mapping_version[version_pair.first] = max(mapping_version[version_pair.first], version_pair.second);
+            }
+        }
+    }
+    for (const auto& server : existing_server) {
+        result_vector.push_back(make_pair(server, mapping_version[server]));
+    }
+    return result_vector;
 }

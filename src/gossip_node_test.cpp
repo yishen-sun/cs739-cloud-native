@@ -6,15 +6,16 @@
 
 int main(int argc, char *argv[]) {
   if (argc < 4) {
-    std::cerr << "Usage: " << argv[0] << " <node_id> <num_virtual_nodes> <server_address> [<join_address>]" << std::endl;
+    std::cerr << "Usage: " << argv[0] << " <node_id> <num_virtual_nodes> <server_address> <config_path>" << std::endl;
     return 1;
   }
 
   std::string node_id = argv[1];
   int num_virtual_nodes = std::stoi(argv[2]);
   std::string server_address = argv[3];
+  std::string config_path = argv[4];;
 
-  GossipNode node(node_id, num_virtual_nodes, server_address);
+  GossipNode node(node_id, num_virtual_nodes, server_address, config_path);
 
   // Join network through another node, if provided
   // if (argc == 5) {
