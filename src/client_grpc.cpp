@@ -2,7 +2,7 @@
 
 string NO_MASTER_YET = "NO_MASTER_YET";
 
-KeyValueStoreClient::KeyValueStoreClient(string config_path, string assigned_port) : config_path(config_path), assigned_coordinator(assigned_coordinator),
+KeyValueStoreClient::KeyValueStoreClient(string config_path, string assigned_port) : config_path(config_path), assigned_coordinator(assigned_port),
 state_machine_("client_storage.txt", config_path) {
     read_server_config();
     // random_pick_server();
@@ -45,8 +45,6 @@ bool KeyValueStoreClient::Put(const string& key, const string& value) {
             // update channel to the coordinator
             cout << response.coordinator() << endl;
             update_channel_to_coordinator(response.coordinator());
-            
-            exit(0);
             return Put(key, value);
         }
         return true;
@@ -64,8 +62,10 @@ bool KeyValueStoreClient::Get(const string& key, string& result) {
     gossipnode::GetResponse response;
 
     request.set_key(key);
-    // context.set_deadline(chrono::system_clock::now() + chrono::milliseconds(100));
+    context.set_deadline(chrono::system_clock::now() + chrono::milliseconds(100));
+    cout << "send get to: " << assigned_coordinator << endl;
     grpc::Status status = stubs_[assigned_coordinator]->ClientGet(&context, request, &response);
+    
     vector<pair<string, vector<pair<string, uint64_t>>>> potential_result;
     vector<pair<string, uint64_t>> vector_clock;
     if (status.ok()) {
@@ -95,6 +95,7 @@ bool KeyValueStoreClient::read_server_config() {
         channel_args.SetInt(GRPC_ARG_MAX_RECEIVE_MESSAGE_LENGTH, INT_MAX);
         std::shared_ptr<grpc::Channel> channel_ = grpc::CreateCustomChannel(server_addr, grpc::InsecureChannelCredentials(), channel_args);
         stubs_[server_addr] = gossipnode::GossipNodeService::NewStub(channel_);
+        cout << "success init " << server_addr << endl;
     }
     return true;
 }
