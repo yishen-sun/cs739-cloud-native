@@ -50,46 +50,56 @@ std::vector<std::string> ConsistentHashingRing::getReplicasNodes(const std::stri
     std::unordered_set<std::string> nodes_set;
     size_t hash = hashFunction(key);
     size_t i = hash;
-    while (nodes_vec.size() < num_replicas) {
-        auto it = ring_.lower_bound(i);
-        if (it == ring_.end()) {
-            it = ring_.begin();
-        }
+
+    auto it = ring_.lower_bound(i);
+    if (it == ring_.end()) {
+        it = ring_.begin();
+    }
+    auto begin = it->first;
+    do {
         if (nodes_set.count(it->second) == 0) {
             nodes_set.emplace(it->second);
             nodes_vec.push_back(it->second);
         }
         i = (it->first) + 1;
-        
-    }
-    
+        it = ring_.lower_bound(i);
+        if (it == ring_.end()) {
+            it = ring_.begin();
+        }
+    } while (nodes_set.size() < num_replicas && it->first != begin);
+
     return nodes_vec;
 }
 
 void ConsistentHashingRing::printAllVirtualNode() {
     std::cout << "printAllVirtualNode" << std::endl;
     for (const auto& kv : ring_) {
-        std::cout << "Key: " << kv.first << " Value: " << kv.second << std::endl;
+        std::cout << "Pos: " << kv.first << " Node: " << kv.second << std::endl;
     }
 }
 
-bool ConsistentHashingRing::checkDataBelonging(const std::string& key, int num_replicas) {
+bool ConsistentHashingRing::checkDataBelonging(const std::string& key, const std::string& node_id, int num_replicas) {
     if (ring_.empty()) {
         return false;
     }
     std::unordered_set<std::string> nodes_set;
     size_t hash = hashFunction(key);
     size_t i = hash;
-    while (nodes_set.size() < num_replicas) {
-        auto it = ring_.lower_bound(i);
-        if (it == ring_.end()) {
-            it = ring_.begin();
-        }
+    auto it = ring_.lower_bound(i);
+    if (it == ring_.end()) {
+        it = ring_.begin();
+    }
+    auto begin = it->first;
+    do {
         if (nodes_set.count(it->second) == 0) {
-            if (it->second == myself_id) return true;
+            if (it->second == node_id) return true;
             nodes_set.emplace(it->second);
         }
         i = (it->first) + 1;
-    }
+        it = ring_.lower_bound(i);
+        if (it == ring_.end()) {
+            it = ring_.begin();
+        }
+    } while (nodes_set.size() < num_replicas && it->first != begin);
     return false;
 }

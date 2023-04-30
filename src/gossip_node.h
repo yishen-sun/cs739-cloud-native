@@ -58,6 +58,7 @@ public:
   grpc::Status PeerPut(grpc::ServerContext *context, const gossipnode::PeerPutRequest *request, gossipnode::PeerPutResponse *response) override;
   grpc::Status PeerGet(grpc::ServerContext *context, const gossipnode::PeerGetRequest *request, gossipnode::PeerGetResponse *response) override;
 
+  grpc::Status AdminCmd(grpc::ServerContext *context, const gossipnode::AdminCmdRequest *request, gossipnode::AdminCmdResponse *response) override;
 /*
 bucket name: db
 store: real kv pair
@@ -81,7 +82,8 @@ void read_exists_servers(); // read configuration to initialize grpc stubs to al
 std::unordered_set<std::string> read_server_config_update_stubs_(); // if the server is permernantly removed, modify the configuration.
 bool is_coordinator(vector<string>& quorum_member);
 //std::unique_ptr<gossipnode::GossipNodeService::Stub> stub_;
-std::vector<std::string> getTransferKey(const std::string &node_id, int num_replicas);
+std::vector<std::string> getJoinTransferKey(const std::string &node_id, int num_replicas);
+std::vector<std::string> getLeaveTransferKey(ConsistentHashingRing& old_ring, const std::string &node_id, int num_replicas);
 std::unordered_map<std::string, std::vector<std::string>> node_transfer_keys_;
 // std::map<std::string, std::string> network_;
 // std::map<size_t, std::string> getRingData(); // ?????
@@ -91,5 +93,8 @@ std::unordered_map<std::string, std::chrono::time_point<std::chrono::high_resolu
 
 // storage interface
 std::unordered_map<size_t, std::string> storage_;
+
+// alive status
+bool alive_;
 };
 #endif // GOSSIP_NODE_H

@@ -17,7 +17,7 @@ public:
     std::string getNode(const std::string& key);
     std::vector<std::string> getReplicasNodes(const std::string& key, int num_replicas);
     size_t hashFunction(const std::string& key);
-    bool checkDataBelonging(const std::string& key, int num_replicas);
+    bool checkDataBelonging(const std::string& key, const std::string& node_id, int num_replicas);
     void printAllVirtualNode();
 
 private:

@@ -1,7 +1,7 @@
 #include "gossip_node.h"
 
 GossipNode::GossipNode(const std::string &node_id, int num_virtual_nodes, const std::string &server_address)
-    : node_id_(node_id), server_address_(server_address), ring_(node_id, num_virtual_nodes), state_machine_(node_id + "storage.txt", "servers_addr.txt") {
+    : node_id_(node_id), server_address_(server_address), ring_(node_id, num_virtual_nodes), state_machine_(node_id + "storage.txt", "servers_addr.txt"), alive_(false) {
   // srand(static_cast<unsigned int>(time(nullptr)));
   // channel_ = grpc::CreateChannel(server_address, grpc::InsecureChannelCredentials());
   // stub_ = gossipnode::GossipNodeService::NewStub(channel_);
@@ -10,6 +10,29 @@ GossipNode::GossipNode(const std::string &node_id, int num_virtual_nodes, const 
   state_machine_.write_nodes_config(res);
 }
 
+grpc::Status GossipNode::AdminCmd(grpc::ServerContext *context, const gossipnode::AdminCmdRequest *request, gossipnode::AdminCmdResponse *response) {
+  if (request->cmd() == "JoinNetwork") {
+    // acquire file write lock
+    std::unordered_set<std::string> res = read_server_config_update_stubs_();
+    joinNetwork();
+    state_machine_.write_nodes_config(res);
+    alive_ = true;
+    // release file write lock
+    response->set_success(true);
+  } else if (request->cmd() == "LeaveNetwork") {
+    // acquire file write lock
+    std::unordered_set<std::string> res = state_machine_.get_nodes_config();
+    res.erase(node_id_);
+    alive_ = false;
+    leaveNetwork();
+    state_machine_.write_nodes_config(res);
+    // release file write lock
+    response->set_success(true);
+  } else {
+    response->set_success(false);
+  }
+  return grpc::Status::OK;
+}
 
 std::unordered_set<std::string> GossipNode::read_server_config_update_stubs_() {
     // file format:
@@ -38,11 +61,23 @@ std::unordered_set<std::string> GossipNode::read_server_config_update_stubs_() {
     return server_config;
 }
 
-std::vector<std::string> GossipNode::getTransferKey(const std::string &node_id, int num_replicas) {
+std::vector<std::string> GossipNode::getJoinTransferKey(const std::string &node_id, int num_replicas) {
   std::vector<std::string> all_keys = state_machine_.get_all_keys();
   std::vector<std::string> filtered_keys;
   for (auto keys : all_keys) {
-    if (ring_.checkDataBelonging(keys, num_replicas) == false) filtered_keys.push_back(keys);
+    if (ring_.checkDataBelonging(keys, node_id, num_replicas) == false) filtered_keys.push_back(keys);
+  }
+  return filtered_keys;
+}
+
+std::vector<std::string> GossipNode::getLeaveTransferKey(ConsistentHashingRing& old_ring, const std::string &node_id, int num_replicas) {
+  std::vector<std::string> all_keys = state_machine_.get_all_keys();
+  std::vector<std::string> filtered_keys;
+  
+  for (auto keys : all_keys) {
+    // find the key that is not on the old ring but on the new ring
+    if (old_ring.checkDataBelonging(keys, node_id, num_replicas) == false && ring_.checkDataBelonging(keys, node_id, num_replicas) == true)
+    filtered_keys.push_back(keys);
   }
   return filtered_keys;
 }
@@ -51,6 +86,7 @@ bool GossipNode::joinNetwork() {
   std::cout << "send joinNetwork RPC" << std::endl;
   // Add myself to the ring
   ring_.addNode(node_id_);
+  members_heartbeat_list_[node_id_] = std::chrono::high_resolution_clock::now();
   bool flag = true;
   for (auto i : stubs_) {
     grpc::ClientContext context;
@@ -61,9 +97,10 @@ bool GossipNode::joinNetwork() {
     if (!status.ok()) {
       std::cerr << "joinNetwork RPC failed: " << i.first << " " << status.error_message() << std::endl;
       flag = false;
-    } else {
-      if (!response.success()) std::cout << "JoinNetwork response from node " << i.first << ": not success " << std::endl;
+    } else if (!response.success()) {
+      std::cout << "JoinNetwork response from node " << i.first << ": not success " << std::endl;
       flag = false;
+      
     }
   }
   ring_.printAllVirtualNode();
@@ -73,11 +110,13 @@ bool GossipNode::joinNetwork() {
 
 grpc::Status GossipNode::JoinNetwork(grpc::ServerContext *context, const gossipnode::JoinRequest *request, gossipnode::JoinResponse *response) {
   std::cout << "receive joinNetwork RPC" << std::endl;
-  // Add the joining node to the ring and update membership list
+  // Add the joining node to the ring and update stub
   ring_.addNode(request->node_id());
-  //members_heartbeat_list_[request->node_id()] = std::chrono::high_resolution_clock::now();
+  members_heartbeat_list_[request->node_id()] = std::chrono::high_resolution_clock::now();
+  stubs_[request->node_id()] = gossipnode::GossipNodeService::NewStub(grpc::CreateChannel(request->node_id(), grpc::InsecureChannelCredentials()));
+  
 
-  std::vector<std::string> keys = getTransferKey(request->node_id(), RPELICA_N);
+  std::vector<std::string> keys = getJoinTransferKey(node_id_, RPELICA_N);
   response->set_success(true);
   for (auto key : keys) {
     int res = peerPut(request->node_id(), key, state_machine_.get_value(key), state_machine_.get_version(key));
@@ -135,26 +174,90 @@ grpc::Status GossipNode::UpdateRing(grpc::ServerContext *context, const gossipno
   return grpc::Status::OK;
 }
 
+void GossipNode::leaveNetwork() {
+  std::cout << "send leaveNetwork RPC" << std::endl;
+  ConsistentHashingRing old_ring(ring_);
+  ring_.removeNode(node_id_);
+  bool flag = true;
+  for (auto i : stubs_) {
+    grpc::ClientContext context;
+    gossipnode::LeaveRequest request;
+    gossipnode::LeaveResponse response;
+    request.set_node_id(node_id_);
+    grpc::Status status = i.second->LeaveNetwork(&context, request, &response);
+    if (!status.ok()) {
+      std::cerr << "leaveNetwork RPC failed: " << i.first << " " << status.error_message() << std::endl;
+      flag = false;
+    } else if (!response.success()) {
+      std::cout << "leaveNetwork response from node " << i.first << ": not success " << std::endl;
+      flag = false;
+    } else {
+      std::vector<std::string> keys = getLeaveTransferKey(old_ring, i.first, RPELICA_N);
+      for (auto key : keys) {
+        int k = 0;
+        while (peerPut(i.first, key, state_machine_.get_value(key), state_machine_.get_version(key)) > 0 && k++ < 4) {
+          std::cout << "retry peerPut to " << i.first << " for " << k << " times" << std::endl;
+        }
+      }
+    }
+  }
+  
+  return;
+}
+
 grpc::Status GossipNode::LeaveNetwork(grpc::ServerContext *context, const gossipnode::LeaveRequest *request, gossipnode::LeaveResponse *response) {
-  // std::string leaving_node_id = request->node_id();
-  // ring_.removeNode(leaving_node_id);
-  // network_.erase(leaving_node_id);
-  // gossip();
-  // response->set_success(true);
+  std::cout << "receive LeaveNetwork RPC" << std::endl;
+  ring_.removeNode(request->node_id());
+  stubs_.erase(request->node_id());
+  members_heartbeat_list_.erase(request->node_id());
+  response->set_success(true);
   return grpc::Status::OK;
+}
+
+int64_t time_point_to_ns(const std::chrono::time_point<std::chrono::high_resolution_clock>& tp) {
+  return std::chrono::duration_cast<std::chrono::nanoseconds>(tp.time_since_epoch()).count();
+}
+
+std::chrono::time_point<std::chrono::high_resolution_clock> ns_to_time_point(int64_t ns) {
+  return std::chrono::high_resolution_clock::time_point(std::chrono::nanoseconds(ns));
+}
+
+void GossipNode::gossip() {
+  members_heartbeat_list_[node_id_] = std::chrono::high_resolution_clock::now();
+
+  // TODO: Select random nodes from the membership list to gossip with
+  std::vector<std::string> random_nodes;
+
+  gossipnode::GossipRequest request;
+  gossipnode::GossipResponse response;
+
+  // Prepare the gossip request with the local membership list
+  for (const auto& kv : members_heartbeat_list_) {
+    gossipnode::KeyTimePair* kv_pair = request.add_member_list();
+    kv_pair->set_key(kv.first);
+    kv_pair->set_time_point_ns(time_point_to_ns(kv.second));
+  }
+
+  for (auto it : stubs_) {
+    grpc::ClientContext context;
+    grpc::Status status = it.second->Gossip(&context, request, &response);
+
+    if (!status.ok() || !response.success()) {
+      std::cerr << "Failed to gossip with " << it.first << ": " << status.error_message() << std::endl;
+    }
+  }
 }
 
 grpc::Status GossipNode::Gossip(grpc::ServerContext *context, const gossipnode::GossipRequest *request, gossipnode::GossipResponse *response) {
-//   std::map<size_t, std::string> updated_ring;
-//   for (const auto &pair : request->ring_data()) {
-//     updated_ring[pair.key()] = pair.value();
-//   }
-//   updateRing(updated_ring);
-//   response->set_success(true);
+  for (const auto& kv_pair : request->member_list()) {
+    auto tp1 = ns_to_time_point(kv_pair.time_point_ns());
+    auto tp2 = members_heartbeat_list_.count(kv_pair.key()) ? members_heartbeat_list_[kv_pair.key()] : std::chrono::time_point<std::chrono::high_resolution_clock>(std::chrono::high_resolution_clock::duration::min());
+    auto tp = tp1 > tp2 ? tp1 : tp2;
+    members_heartbeat_list_[kv_pair.key()] = tp;
+  }
+  response->set_success(true);
   return grpc::Status::OK;
 }
-
-
 
 grpc::Status GossipNode::ClientGet(grpc::ServerContext *context, const gossipnode::GetRequest *request, gossipnode::GetResponse *response) {
     // read value from 3 replica, receive more than 2 acknowledgement before return to clients
@@ -311,37 +414,6 @@ int GossipNode::peerGet(const string peer_server, const string key, string& valu
     return 0;
 }
 
-
-
-
-
-void GossipNode::gossip() {
-  // // Select random nodes from the membership list to gossip with
-  // std::vector<std::string> random_nodes;
-
-  // // TODO: Select random nodes from the membership list
-
-  // gossipnode::GossipRequest request;
-  // gossipnode::GossipResponse response;
-
-  // // Prepare the gossip request with the local membership list
-  // for (const auto &[node_id, timestamp] : members_heartbeat_list_) {
-  //   auto entry = request.add_members();
-  //   entry->set_node_id(node_id);
-  //   entry->set_timestamp(timestamp.time_since_epoch().count());
-  // }
-
-  // for (const std::string &addr : random_nodes) {
-  //   grpc::ClientContext context;
-  //   auto stub = stubs_[addr].get();
-  //   grpc::Status status = stub->Gossip(&context, request, &response);
-
-  //   if (!status.ok()) {
-  //     std::cerr << "Failed to gossip with " << addr << ": " << status.error_message() << std::endl;
-  //   }
-  // }
-}
-
 bool GossipNode::is_coordinator(vector<string>& quorum_member) {
   for (const auto& cur_server : quorum_member) {
     if (cur_server == node_id_) return true;
@@ -349,7 +421,3 @@ bool GossipNode::is_coordinator(vector<string>& quorum_member) {
   return false;
 }
 
-//TODO: shutdown after complete
-// int main() {
-//   return 0;
-// }

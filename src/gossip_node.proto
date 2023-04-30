@@ -11,6 +11,7 @@ service GossipNodeService {
     rpc ClientPut(PutRequest) returns (PutResponse) {}
     rpc PeerGet(PeerGetRequest) returns (PeerGetResponse) {}
     rpc PeerPut(PeerPutRequest) returns (PeerPutResponse) {}
+    rpc AdminCmd(AdminCmdRequest) returns (AdminCmdResponse) {}
 }
 
 message JoinRequest {
@@ -39,7 +40,7 @@ message GossipResponse {
 
 message KeyTimePair {
     string key = 1;
-    int64 time_point = 2;
+    int64 time_point_ns = 2;
 }
 
 message UpdateRingRequest {
@@ -107,4 +108,12 @@ message PeerGetRequest {
 
 message PeerGetResponse {
     Data data = 1;
+}
+
+message AdminCmdRequest {
+    string cmd = 1;
+}
+
+message AdminCmdResponse {
+    bool success = 1;
 }

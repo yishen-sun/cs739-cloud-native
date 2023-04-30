@@ -9,7 +9,13 @@ int main () {
     chr.printAllVirtualNode();
     chr.removeNode("a");
     chr.printAllVirtualNode();
-    std::cout << "k1 all replicas located on: " << chr.getNode("k1") << std::endl;
+    std::cout << "k1 located on: " << chr.getNode("k1") << std::endl;
+    std::vector<std::string> rep = chr.getReplicasNodes("k1", 3);
+    std::cout << "k1 all replicas located on: ";
+    for (auto s : rep) {
+        std::cout << s << " ";
+    }
+    std::cout << std::endl;
     chr.addNode("a");
     chr.printAllVirtualNode();
     chr.addNode("c");
@@ -17,7 +23,7 @@ int main () {
     chr.addNode("d");
     chr.printAllVirtualNode();
 
-    std::vector<std::string> rep = chr.getReplicasNodes("k1", 3);
+    rep = chr.getReplicasNodes("k1", 3);
     std::cout << "k1 all replicas located on: ";
     for (auto s : rep) {
         std::cout << s << " ";
