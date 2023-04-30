@@ -2,12 +2,8 @@
 
 string NO_MASTER_YET = "NO_MASTER_YET";
 
-KeyValueStoreClient::KeyValueStoreClient(string config_path, string assigned_port) : config_path(config_path), assigned_port(assigned_port),
-state_machine_("client_storage.txt") {
-    grpc::ChannelArguments channel_args;
-    channel_args.SetInt(GRPC_ARG_MAX_RECEIVE_MESSAGE_LENGTH, INT_MAX);
-    channel_ = grpc::CreateCustomChannel(assigned_port, grpc::InsecureChannelCredentials(), channel_args);
-    stub_ = gossipnode::GossipNodeService::NewStub(channel_);
+KeyValueStoreClient::KeyValueStoreClient(string config_path, string assigned_port) : config_path(config_path), assigned_coordinator(assigned_coordinator),
+state_machine_("client_storage.txt", config_path) {
     read_server_config();
     // random_pick_server();
 }
@@ -35,15 +31,22 @@ bool KeyValueStoreClient::Put(const string& key, const string& value) {
     
     
     // context.set_deadline(chrono::system_clock::now() + chrono::milliseconds(100));
-    grpc::Status status = stub_->ClientPut(&context, request, &response);
+    grpc::Status status = stubs_[assigned_coordinator]->ClientPut(&context, request, &response);
     if (status.ok()) {
         if (response.ret() == gossipnode::PutReturn::OK) {
             cout << "Put return status is ok, response true" << endl;
+            vector<pair<string, uint64_t>> mem_version = state_machine_.get_version(key);
+            vector<pair<string, uint64_t>> new_version = state_machine_.update_version(mem_version, response.coordinator());
+            state_machine_.put(key, value, new_version);
         } else if (response.ret() == gossipnode::PutReturn::FAILED) {
+            cout << "Put grpc return FAILED" << endl;
             return false;
         } else if (response.ret() == gossipnode::PutReturn::NOT_COORDINATOR) {
             // update channel to the coordinator
+            cout << response.coordinator() << endl;
             update_channel_to_coordinator(response.coordinator());
+            
+            exit(0);
             return Put(key, value);
         }
         return true;
@@ -62,7 +65,7 @@ bool KeyValueStoreClient::Get(const string& key, string& result) {
 
     request.set_key(key);
     // context.set_deadline(chrono::system_clock::now() + chrono::milliseconds(100));
-    grpc::Status status = stub_->ClientGet(&context, request, &response);
+    grpc::Status status = stubs_[assigned_coordinator]->ClientGet(&context, request, &response);
     vector<pair<string, vector<pair<string, uint64_t>>>> potential_result;
     vector<pair<string, uint64_t>> vector_clock;
     if (status.ok()) {
@@ -86,39 +89,36 @@ bool KeyValueStoreClient::Get(const string& key, string& result) {
 
 
 bool KeyValueStoreClient::read_server_config() {
-    // file format:
-    // <name>/<addr> e.g. A/0.0.0.0:50001
-    ifstream infile(config_path);
-    string line;
-    while (getline(infile, line)) {
-        size_t pos = line.find('/');
-        if (pos != string::npos) {
-            string key = line.substr(0, pos);
-            string value = line.substr(pos + 1, line.size() - pos - 1);
-            server_config[key] = value;
-        }
+    vector<string> config = state_machine_.get_nodes_config();
+    for (const auto& server_addr: config) {
+        grpc::ChannelArguments channel_args;
+        channel_args.SetInt(GRPC_ARG_MAX_RECEIVE_MESSAGE_LENGTH, INT_MAX);
+        std::shared_ptr<grpc::Channel> channel_ = grpc::CreateCustomChannel(server_addr, grpc::InsecureChannelCredentials(), channel_args);
+        stubs_[server_addr] = gossipnode::GossipNodeService::NewStub(channel_);
     }
     return true;
 }
 
 void KeyValueStoreClient::random_pick_server() {
-    auto random_server =
-        next(begin(server_config), rand_between(0, server_config.size() - 1));
-    grpc::ChannelArguments channel_args;
-    channel_args.SetInt(GRPC_ARG_MAX_RECEIVE_MESSAGE_LENGTH, INT_MAX);
-    cout << random_server->second << endl;
-    channel_ = grpc::CreateCustomChannel(random_server->second, grpc::InsecureChannelCredentials(),
-                                         channel_args);
-    stub_ = gossipnode::GossipNodeService::NewStub(channel_);
+    // auto random_server =
+    //     next(begin(server_config), rand_between(0, server_config.size() - 1));
+    // grpc::ChannelArguments channel_args;
+    // channel_args.SetInt(GRPC_ARG_MAX_RECEIVE_MESSAGE_LENGTH, INT_MAX);
+    // cout << random_server->second << endl;
+    // channel_ = grpc::CreateCustomChannel(random_server->second, grpc::InsecureChannelCredentials(),
+    //                                      channel_args);
+    // stub_ = gossipnode::GossipNodeService::NewStub(channel_);
 }
 
 void KeyValueStoreClient::update_channel_to_coordinator(string coordinator) {
-    grpc::ChannelArguments channel_args;
-    channel_args.SetInt(GRPC_ARG_MAX_RECEIVE_MESSAGE_LENGTH, INT_MAX);
-    
-    channel_ = grpc::CreateCustomChannel(server_config[coordinator], grpc::InsecureChannelCredentials(),
-                                         channel_args);
-    stub_ = gossipnode::GossipNodeService::NewStub(channel_);
+    if (stubs_.find(coordinator) == stubs_.end()) {
+        grpc::ChannelArguments channel_args;
+        channel_args.SetInt(GRPC_ARG_MAX_RECEIVE_MESSAGE_LENGTH, INT_MAX);
+        std::shared_ptr<grpc::Channel> channel_ = grpc::CreateCustomChannel(coordinator, grpc::InsecureChannelCredentials(), channel_args);
+        stubs_[coordinator] = gossipnode::GossipNodeService::NewStub(channel_);
+    }
+    assigned_coordinator = coordinator;
+    cout << "success update" << endl;
 }
 
 int KeyValueStoreClient::rand_between(int start, int end) {
@@ -140,9 +140,10 @@ void KeyValueStoreClient::reconcile(vector<pair<string, vector<pair<string, uint
         return;
     }
     int i = 0;
+    cout << "Potential result including" << endl;
     for (const auto& potential_pair : conflict_versions) {
-        cout << "Potential result including" << endl;
-        cout << i << ": " << potential_pair.first << endl;
+        
+        cout << "---  " << i << ": " << potential_pair.first << endl;
         i++;
     }
     cout << "Select which version do you want to keep" << endl;

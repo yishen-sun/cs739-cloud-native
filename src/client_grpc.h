@@ -26,17 +26,16 @@ using namespace std;
 
 class KeyValueStoreClient {
    public:
-    KeyValueStoreClient(string config_path, string asigned_port);
+    KeyValueStoreClient(string config_path, string assigned_coordinator);
 
     bool Put(const string& key, const string& value);
 
     bool Get(const string& key, string& result);
 
    private:
-    unique_ptr<gossipnode::GossipNodeService::Stub> stub_;
-    shared_ptr<grpc::Channel> channel_;
+    std::unordered_map<std::string, std::shared_ptr<gossipnode::GossipNodeService::Stub>> stubs_; // key: server_addr, value: stub_
     string config_path;
-    string assigned_port;
+    string assigned_coordinator;
     unordered_map<string, string> server_config;  // k = name A, v = addr:port 0.0.0.0:50001
     bool read_server_config();
     void random_pick_server();
