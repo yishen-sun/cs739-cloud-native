@@ -47,6 +47,39 @@ void StateMachine::flush_to_disk() {
     file.flush();
     file.close();
 }
+
+void StateMachine::read_file() {
+    ifstream file(storage_name);
+    if (!file.is_open()) {
+        cout << "Error opening file " << storage_name << " for reading" << endl;
+        return;
+    }
+
+    value_store_.clear();
+    version_store_.clear();
+    string line;
+    while (getline(file, line)) {
+        istringstream iss(line);
+        string key;
+        iss >> key;
+
+        string value;
+        iss >> value;
+
+        vector<pair<string, uint64_t>> version_infos;
+        string version_info_str;
+        while (iss >> version_info_str) {
+            string server = version_info_str.substr(0, version_info_str.find("@"));
+            uint64_t version = stoull(version_info_str.substr(version_info_str.find("@") + 1));
+            version_infos.emplace_back(server, version);
+        }
+
+        value_store_[key] = value;
+        version_store_[key] = version_infos;
+    }
+    file.close();
+}
+
 vector<string> StateMachine::get_all_keys() {
     vector<string> res;
     for (auto kv : value_store_) {
@@ -102,7 +135,9 @@ int StateMachine::check_conflict_version(const vector<pair<string, uint64_t>>& i
     }
     int res = 0;
     unordered_set<string> incoming_set;
+    unordered_set<string> existing_set;
     for (const auto& incoming_pair : incoming_vector) incoming_set.insert(incoming_pair.first);
+    for (const auto& existing_pair : existing_vector) existing_set.insert(existing_pair.first);
     for (const auto& incoming_pair : incoming_vector) { 
         for (const auto& existing_pair : existing_vector) {
             if (incoming_set.find(existing_pair.first) == incoming_set.end()) {
@@ -118,6 +153,11 @@ int StateMachine::check_conflict_version(const vector<pair<string, uint64_t>>& i
             }
         }
     }    
+    if (res == 0) {
+        for (const auto& incomming_pair : incoming_set) {
+            if (existing_set.find(incomming_pair) == existing_set.end()) res = 1;
+        }
+    }
 
     return res;
 }
@@ -209,4 +249,11 @@ vector<pair<string, uint64_t>> StateMachine::reconcile_version(vector<pair<strin
         result_vector.push_back(make_pair(server, mapping_version[server]));
     }
     return result_vector;
+}
+
+
+void StateMachine::print_version(vector<pair<string, uint64_t>> versions) {
+  for (const auto& v : versions) {
+    cout << "Server: " << v.first << " Version: " << v.second << endl;
+  }
 }

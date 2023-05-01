@@ -8,7 +8,7 @@ state_machine_("client_storage.txt", config_path) {
     // random_pick_server();
 }
 
-bool KeyValueStoreClient::Put(const string& key, const string& value) {
+bool KeyValueStoreClient::Put(const string& key, const string& value, bool retry) {
     grpc::ClientContext context;
     gossipnode::PutRequest request;
     gossipnode::PutResponse response;
@@ -19,9 +19,11 @@ bool KeyValueStoreClient::Put(const string& key, const string& value) {
 
     string result;
     bool success;
-    do {
-        success = Get(key, result); 
-    } while (success != true);
+    if (retry == false) {
+        do {
+            success = Get(key, result); 
+        } while (success != true);
+    }
 
     for (const auto& version_pair : state_machine_.get_version(key)) {
       auto& version_info = *(data.add_version_info());
@@ -45,7 +47,7 @@ bool KeyValueStoreClient::Put(const string& key, const string& value) {
             // update channel to the coordinator
             cout << response.coordinator() << endl;
             update_channel_to_coordinator(response.coordinator());
-            return Put(key, value);
+            return Put(key, value, true);
         }
         return true;
 
@@ -77,6 +79,7 @@ bool KeyValueStoreClient::Get(const string& key, string& result) {
             }
             potential_result.push_back(make_pair(value, vector_clock));
         }
+        update_channel_to_coordinator(response.coordinator());
         reconcile(potential_result, key, result);
         return true;
         
@@ -153,10 +156,12 @@ void KeyValueStoreClient::reconcile(vector<pair<string, vector<pair<string, uint
 
     while (true) {
         cin >> selected;
+        cout << "you select: " << selected << endl;
         if (selected >= 0 && selected < conflict_versions.size()) {
             result = conflict_versions[selected].first;
             state_machine_.put(key, result, reconcile_version);
-            Put(key, result);
+            state_machine_.print_version(reconcile_version);
+            Put(key, result, true);
             return;
         }
         else {

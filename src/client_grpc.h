@@ -28,7 +28,7 @@ class KeyValueStoreClient {
    public:
     KeyValueStoreClient(string config_path, string assigned_coordinator);
 
-    bool Put(const string& key, const string& value);
+    bool Put(const string& key, const string& value, bool retry);
 
     bool Get(const string& key, string& result);
 

@@ -6,10 +6,11 @@ GossipNode::GossipNode(const std::string &node_id, int num_virtual_nodes, const 
   // channel_ = grpc::CreateChannel(server_address, grpc::InsecureChannelCredentials());
   // stub_ = gossipnode::GossipNodeService::NewStub(channel_);
   std::unordered_set<std::string> res = read_server_config_update_stubs_();
+  state_machine_.read_file();
   
   if (FIXED_CONFIG_TEST == true) {
     ring_.addNode(node_id_);
-    ring_.printAllVirtualNode();
+    // ring_.printAllVirtualNode();
   } else {
     
     // joinNetwork();
@@ -373,7 +374,7 @@ grpc::Status GossipNode::PeerPut(grpc::ServerContext *context, const gossipnode:
   print_version(new_version);
   cout << "old version: ----" << endl;
   print_version(old_version);
-  
+  cout << "check conflict version: " << state_machine_.check_conflict_version(new_version, old_version) << endl;
   if (state_machine_.check_conflict_version(new_version, old_version) == 1) {
     // only apply unconflict data
     state_machine_.put(key, value, new_version);
