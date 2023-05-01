@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
         iss >> command;
         if (command == "put") {
             iss >> key >> value;
-            if (kv.Put(key, value)) {
+            if (kv.Put(key, value, false)) {
                 std::cout << "Put successful." << std::endl;
             } else {
                 std::cout << "Put failed." << std::endl;

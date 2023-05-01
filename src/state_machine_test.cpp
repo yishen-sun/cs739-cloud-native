@@ -79,6 +79,13 @@ int main() {
   assert(res == 1);
   cout << "Test case 1.g passed\n";
 
+  // Test case 1.g: Latest vectors -> 1
+  vector<pair<string, uint64_t>> incoming_latest2{{"server_B", 2}, {"server_A", 1}};
+  vector<pair<string, uint64_t>> existing_earlier2{{"server_A", 1}};
+  res = sm.check_conflict_version(incoming_latest2, existing_earlier2);
+  assert(res == 1);
+  cout << "Test case 1.h passed\n";
+
   cout << "All test cases for check_conflict_version passed!" << endl << endl;
 
 
