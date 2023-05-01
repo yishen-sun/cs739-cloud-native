@@ -18,6 +18,7 @@ GossipNode::GossipNode(const std::string &node_id, int num_virtual_nodes, const 
 }
 
 grpc::Status GossipNode::AdminCmd(grpc::ServerContext *context, const gossipnode::AdminCmdRequest *request, gossipnode::AdminCmdResponse *response) {
+  response->set_success(false);
   if (request->cmd() == "JoinNetwork") {
     // acquire file write lock
     std::unordered_set<std::string> res = read_server_config_update_stubs_();
@@ -35,6 +36,8 @@ grpc::Status GossipNode::AdminCmd(grpc::ServerContext *context, const gossipnode
     state_machine_.write_nodes_config(res);
     // release file write lock
     response->set_success(true);
+  } else if (request->cmd() == "Ping") {
+    response->set_success(alive_);
   } else {
     response->set_success(false);
   }
@@ -230,6 +233,7 @@ std::chrono::time_point<std::chrono::high_resolution_clock> ns_to_time_point(int
 }
 
 void GossipNode::gossip() {
+  cout << "trigger gossip send " << endl;
   members_heartbeat_list_[node_id_] = std::chrono::high_resolution_clock::now();
 
   // TODO: Select random nodes from the membership list to gossip with
@@ -256,6 +260,7 @@ void GossipNode::gossip() {
 }
 
 grpc::Status GossipNode::Gossip(grpc::ServerContext *context, const gossipnode::GossipRequest *request, gossipnode::GossipResponse *response) {
+  cout << "trigger gossip receive " << endl;
   for (const auto& kv_pair : request->member_list()) {
     auto tp1 = ns_to_time_point(kv_pair.time_point_ns());
     auto tp2 = members_heartbeat_list_.count(kv_pair.key()) ? members_heartbeat_list_[kv_pair.key()] : std::chrono::time_point<std::chrono::high_resolution_clock>(std::chrono::high_resolution_clock::duration::min());

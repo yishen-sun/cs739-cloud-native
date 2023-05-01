@@ -15,8 +15,8 @@
 const int RPELICA_N = 3;
 const int W_COUNT = 2;
 const int R_COUNT = 2;
-
-const bool FIXED_CONFIG_TEST = true;
+constexpr int HEARTBEAT_INTERVAL = 1000;
+const bool FIXED_CONFIG_TEST = false;
 
 class GossipNode : public gossipnode::GossipNodeService::Service {
 public:
@@ -89,7 +89,7 @@ std::vector<std::string> getLeaveTransferKey(ConsistentHashingRing& old_ring, co
 std::unordered_map<std::string, std::vector<std::string>> node_transfer_keys_;
 // std::map<std::string, std::string> network_;
 // std::map<size_t, std::string> getRingData(); // ?????
-
+public:
 // membership heartbeat list
 std::unordered_map<std::string, std::chrono::time_point<std::chrono::high_resolution_clock>> members_heartbeat_list_;
 

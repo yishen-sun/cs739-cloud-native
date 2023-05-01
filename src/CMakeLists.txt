@@ -47,6 +47,17 @@ add_custom_command(
 # Include generated *.pb.h files
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 
+add_executable(admin_cli 
+    admin_cli.cpp
+    ${hw_proto_srcs}
+    ${hw_grpc_srcs}
+    admin_grpc.cpp
+    state_machine.cpp)
+target_link_libraries(admin_cli
+    ${_REFLECTION}
+    ${_GRPC_GRPCPP}
+    ${_PROTOBUF_LIBPROTOBUF}
+    stdc++fs)
 
 add_executable(client_cli 
     client_cli.cpp

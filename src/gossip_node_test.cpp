@@ -30,7 +30,14 @@ int main(int argc, char *argv[]) {
 
   std::unique_ptr<grpc::Server> server(builder.BuildAndStart());
   std::cout << "Server listening on " << server_address << std::endl;
-
+  while (true) {
+    if (node.alive_) {
+      auto cur_time = std::chrono::high_resolution_clock::now();
+      auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(cur_time - node.members_heartbeat_list_[node_id]);
+      //std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      if (duration_ms > std::chrono::milliseconds(HEARTBEAT_INTERVAL)) node.gossip();
+    }
+  }
   server->Wait();
   return 0;
 }
