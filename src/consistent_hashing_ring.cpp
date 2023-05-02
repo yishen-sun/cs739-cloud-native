@@ -10,6 +10,7 @@ size_t ConsistentHashingRing::hashFunction(const std::string& key) {
 }
 
 void ConsistentHashingRing::addNode(const std::string& node_id) {
+    node_count_++;
     for (int i = 0; i < num_virtual_nodes_; ++i) {
         std::string virtual_node_id = node_id + std::to_string(i);
         size_t hash = hashFunction(virtual_node_id);
@@ -18,6 +19,7 @@ void ConsistentHashingRing::addNode(const std::string& node_id) {
 }
 
 void ConsistentHashingRing::removeNode(const std::string& node_id) {
+    node_count_--;
     for (int i = 0; i < num_virtual_nodes_; ++i) {
         std::string virtual_node_id = node_id + std::to_string(i);
         size_t hash = hashFunction(virtual_node_id);
@@ -42,6 +44,7 @@ std::string ConsistentHashingRing::getNode(const std::string& key) {
 
 std::vector<std::string> ConsistentHashingRing::getReplicasNodes(const std::string& key, int num_replicas) {
     std::vector<std::string> nodes_vec;
+    int return_replicas = std::min(node_count_, num_replicas);
 
     if (ring_.empty()) {
         return nodes_vec;
@@ -66,7 +69,7 @@ std::vector<std::string> ConsistentHashingRing::getReplicasNodes(const std::stri
         if (it == ring_.end()) {
             it = ring_.begin();
         }
-    } while (nodes_set.size() < num_replicas && it->first != begin);
+    } while (nodes_set.size() < return_replicas && it->first != begin);
 
     return nodes_vec;
 }

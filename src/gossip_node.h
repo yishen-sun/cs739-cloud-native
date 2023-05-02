@@ -12,10 +12,11 @@
 #include <ctime>
 #include <vector>
 
-const int RPELICA_N = 3;
+const int REPLICA_N = 3;
 const int W_COUNT = 2;
 const int R_COUNT = 2;
-constexpr int HEARTBEAT_INTERVAL = 1000;
+constexpr int HEARTBEAT_INTERVAL = 5000;
+constexpr int CHECK_ALIVE_INTERVAL = 10000;
 const bool FIXED_CONFIG_TEST = false;
 
 class GossipNode : public gossipnode::GossipNodeService::Service {
@@ -100,5 +101,6 @@ std::unordered_map<size_t, std::string> storage_;
 bool alive_;
 
 void print_version(vector<pair<string, uint64_t>> versions);
+string assigned_coordinator(vector<string>& quorum_member);
 };
 #endif // GOSSIP_NODE_H

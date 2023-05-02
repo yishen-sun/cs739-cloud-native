@@ -24,6 +24,7 @@ private:
     std::string myself_id;
     int num_virtual_nodes_;
     std::map<size_t, std::string> ring_;
+    int node_count_ = 0;
 };
 
 #endif // CONSISTENT_HASHING_RING_H
