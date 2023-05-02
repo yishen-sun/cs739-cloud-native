@@ -21,22 +21,64 @@ GossipNode::GossipNode(const std::string &node_id, int num_virtual_nodes, const 
 grpc::Status GossipNode::AdminCmd(grpc::ServerContext *context, const gossipnode::AdminCmdRequest *request, gossipnode::AdminCmdResponse *response) {
   response->set_success(false);
   if (request->cmd() == "JoinNetwork") {
-    // acquire file write lock
-    std::unordered_set<std::string> res = read_server_config_update_stubs_();
-    joinNetwork();
-    state_machine_.write_nodes_config(res);
-    alive_ = true;
-    // release file write lock
-    response->set_success(true);
+    #ifdef USE_S3_ADMIN
+      leveldb::LevelDBWrapper* db = new leveldb::LevelDBWrapper("bucketencoder", "lock/", "us-east-2", true, "lock.txt");
+      leveldb::Options options;
+      options.create_if_missing = true;
+      // Open or create the LevelDB database
+      leveldb::Status status = db->Open(options);
+      assert(status.ok());
+      std::vector<std::string> all_keys = db->ReadAllKey();
+      stubs_.clear();
+      for (auto addr : all_keys) {
+        // init stub
+        if (addr != node_id_) {
+          ring_.addNode(addr);
+          stubs_[addr] = gossipnode::GossipNodeService::NewStub(grpc::CreateChannel(addr, grpc::InsecureChannelCredentials()));
+        }
+      }
+      //
+      joinNetwork();
+      //
+      status = db->Put(leveldb::WriteOptions(), node_id_, "");
+      assert(status.ok());
+      alive_ = true;
+      delete db;
+      response->set_success(true);
+    #else
+      // acquire file write lock
+      std::unordered_set<std::string> res = read_server_config_update_stubs_();
+      joinNetwork();
+      state_machine_.write_nodes_config(res);
+      alive_ = true;
+      // release file write lock
+      response->set_success(true);
+    #endif
   } else if (request->cmd() == "LeaveNetwork") {
-    // acquire file write lock
-    std::unordered_set<std::string> res = state_machine_.get_nodes_config();
-    res.erase(node_id_);
-    alive_ = false;
-    leaveNetwork();
-    state_machine_.write_nodes_config(res);
-    // release file write lock
-    response->set_success(true);
+    #ifdef USE_S3_ADMIN
+      leveldb::LevelDBWrapper* db = new leveldb::LevelDBWrapper("bucketencoder", "lock/", "us-east-2", true, "lock.txt");
+      leveldb::Options options;
+      options.create_if_missing = true;
+      // Open or create the LevelDB database
+      leveldb::Status status = db->Open(options);
+      assert(status.ok());
+      // Delete the key-value pair from the database
+      status = db->Delete(leveldb::WriteOptions(), node_id_);
+      assert(status.ok());
+      alive_ = false;
+      leaveNetwork();
+      delete db;
+      response->set_success(true);
+    #else
+      // acquire file write lock
+      std::unordered_set<std::string> res = state_machine_.get_nodes_config();
+      res.erase(node_id_);
+      alive_ = false;
+      leaveNetwork();
+      state_machine_.write_nodes_config(res);
+      // release file write lock
+      response->set_success(true);
+    #endif
   } else if (request->cmd() == "Ping") {
     response->set_success(alive_);
   } else {
@@ -50,16 +92,6 @@ std::unordered_set<std::string> GossipNode::read_server_config_update_stubs_() {
     // <name>/<addr> e.g. A/0.0.0.0:50001
     // TODO: link to S3
     std::unordered_set<std::string> server_config = state_machine_.get_nodes_config();
-    // std::ifstream infile(config_path);
-    // std::string line;
-    // while (std::getline(infile, line)) {
-    //     size_t pos = line.find('/');
-    //     if (pos != std::string::npos) {
-    //         std::string key = line.substr(0, pos);
-    //         std::string value = line.substr(pos + 1, line.size() - pos - 1);
-    //         server_config[key] = value;
-    //     }
-    // }
     stubs_.clear();
     for (const auto& addr : server_config) {
         if (addr != node_id_) {

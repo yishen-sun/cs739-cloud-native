@@ -12,6 +12,10 @@
 #include <ctime>
 #include <vector>
 
+#ifdef USE_S3_ADMIN
+#include "leveldb/wrapper_db.h"
+#endif
+
 const int RPELICA_N = 3;
 const int W_COUNT = 2;
 const int R_COUNT = 2;
