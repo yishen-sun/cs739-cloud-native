@@ -36,12 +36,12 @@ bool KeyValueStoreClient::Put(const string& key, const string& value, bool retry
     grpc::Status status = stubs_[assigned_coordinator]->ClientPut(&context, request, &response);
     if (status.ok()) {
         if (response.ret() == gossipnode::PutReturn::OK) {
-            cout << "Put return status is ok, response true" << endl;
+            // cout << "Put return status is ok, response true" << endl;
             vector<pair<string, uint64_t>> mem_version = state_machine_.get_version(key);
             vector<pair<string, uint64_t>> new_version = state_machine_.update_version(mem_version, response.coordinator());
             state_machine_.put(key, value, new_version);
         } else if (response.ret() == gossipnode::PutReturn::FAILED) {
-            cout << "Put grpc return FAILED" << endl;
+            // cout << "Put grpc return FAILED" << endl;
             return false;
         } else if (response.ret() == gossipnode::PutReturn::NOT_COORDINATOR) {
             // update channel to the coordinator
@@ -65,7 +65,7 @@ bool KeyValueStoreClient::Get(const string& key, string& result) {
 
     request.set_key(key);
     context.set_deadline(chrono::system_clock::now() + chrono::milliseconds(100));
-    cout << "send get to: " << assigned_coordinator << endl;
+    // cout << "send get to: " << assigned_coordinator << endl;
     grpc::Status status = stubs_[assigned_coordinator]->ClientGet(&context, request, &response);
     
     vector<pair<string, vector<pair<string, uint64_t>>>> potential_result;
@@ -122,7 +122,7 @@ void KeyValueStoreClient::update_channel_to_coordinator(string coordinator) {
         stubs_[coordinator] = gossipnode::GossipNodeService::NewStub(channel_);
     }
     assigned_coordinator = coordinator;
-    cout << "success update" << endl;
+    // cout << "success update" << endl;
 }
 
 int KeyValueStoreClient::rand_between(int start, int end) {
