@@ -19,6 +19,16 @@ constexpr int HEARTBEAT_INTERVAL = 5000;
 constexpr int CHECK_ALIVE_INTERVAL = 10000;
 const bool FIXED_CONFIG_TEST = false;
 
+#define RESET "\033[0m"
+#define BLACK "\033[30m"   /* Black */
+#define RED "\033[31m"     /* Red: error */
+#define GREEN "\033[32m"   /* Green: gossip */
+#define YELLOW "\033[33m"  /* Yellow */
+#define BLUE "\033[34m"    /* Blue: admin */
+#define MAGENTA "\033[35m" /* Magenta: peer */
+#define CYAN "\033[36m"    /* Cyan: client */
+#define WHITE "\033[37m"   /* White */
+
 class GossipNode : public gossipnode::GossipNodeService::Service {
 public:
   GossipNode(const std::string &node_id, int num_virtual_nodes, const std::string &server_address, const std::string& config_path);

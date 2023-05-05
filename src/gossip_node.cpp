@@ -95,7 +95,7 @@ std::vector<std::string> GossipNode::getLeaveTransferKey(ConsistentHashingRing& 
 }
 
 bool GossipNode::joinNetwork() {
-  std::cout << "send joinNetwork RPC" << std::endl;
+  std::cout << BLUE << "Send joinNetwork RPC" << RESET << std::endl;
   // Add myself to the ring
   ring_.addNode(node_id_);
   members_heartbeat_list_[node_id_] = std::chrono::high_resolution_clock::now();
@@ -121,7 +121,7 @@ bool GossipNode::joinNetwork() {
 }
 
 grpc::Status GossipNode::JoinNetwork(grpc::ServerContext *context, const gossipnode::JoinRequest *request, gossipnode::JoinResponse *response) {
-  std::cout << "receive joinNetwork RPC" << std::endl;
+  std::cout << BLUE << "Received joinNetwork RPC" << RESET << std::endl;
   // Add the joining node to the ring and update stub
   ring_.addNode(request->node_id());
   members_heartbeat_list_[request->node_id()] = std::chrono::high_resolution_clock::now();
@@ -187,7 +187,7 @@ grpc::Status GossipNode::UpdateRing(grpc::ServerContext *context, const gossipno
 }
 
 void GossipNode::leaveNetwork() {
-  std::cout << "send leaveNetwork RPC" << std::endl;
+  std::cout << BLUE << "Send leaveNetwork RPC" << RESET <<std::endl;
   ConsistentHashingRing old_ring(ring_);
   ring_.removeNode(node_id_);
   bool flag = true;
@@ -218,7 +218,7 @@ void GossipNode::leaveNetwork() {
 }
 
 grpc::Status GossipNode::LeaveNetwork(grpc::ServerContext *context, const gossipnode::LeaveRequest *request, gossipnode::LeaveResponse *response) {
-  std::cout << "receive LeaveNetwork RPC" << std::endl;
+  std::cout << "Received LeaveNetwork RPC" << std::endl;
   ring_.removeNode(request->node_id());
   stubs_.erase(request->node_id());
   members_heartbeat_list_.erase(request->node_id());
@@ -235,7 +235,7 @@ std::chrono::time_point<std::chrono::high_resolution_clock> ns_to_time_point(int
 }
 
 void GossipNode::gossip() {
-  cout << "trigger gossip send " << endl;
+  cout << GREEN << "Send gossip" << RESET << endl;
   members_heartbeat_list_[node_id_] = std::chrono::high_resolution_clock::now();
 
   // TODO: Select random nodes from the membership list to gossip with
@@ -266,7 +266,7 @@ void GossipNode::gossip() {
 }
 
 grpc::Status GossipNode::Gossip(grpc::ServerContext *context, const gossipnode::GossipRequest *request, gossipnode::GossipResponse *response) {
-  cout << "trigger gossip receive " << endl;
+  cout << GREEN << "Received gossip " << RESET << endl;
   for (const auto& kv_pair : request->member_list()) {
     auto tp1 = ns_to_time_point(kv_pair.time_point_ns());
     auto tp2 = members_heartbeat_list_.count(kv_pair.key()) ? members_heartbeat_list_[kv_pair.key()] : std::chrono::time_point<std::chrono::high_resolution_clock>(std::chrono::high_resolution_clock::duration::min());
@@ -278,7 +278,7 @@ grpc::Status GossipNode::Gossip(grpc::ServerContext *context, const gossipnode::
 }
 
 grpc::Status GossipNode::ClientGet(grpc::ServerContext *context, const gossipnode::GetRequest *request, gossipnode::GetResponse *response) {
-    cout << "trigger Client get" << endl;
+    cout << CYAN << "Received client get" << RESET << endl;
     // read value from 3 replica, receive more than 2 acknowledgement before return to clients
     // data vector clock [[server_name, timestamp] ...] 
     string key = request->key();
@@ -331,7 +331,7 @@ grpc::Status GossipNode::ClientGet(grpc::ServerContext *context, const gossipnod
 }
 
 grpc::Status GossipNode::ClientPut(grpc::ServerContext *context, const gossipnode::PutRequest *request, gossipnode::PutResponse *response) {
-  cout << "trigger client put " << endl;
+  cout << CYAN << "Received client put " << RESET << endl;
   // write value in 3 physical node, receive more than 2 acknowledgement before return to clients
   std::string key = request->key();
   std::string value = request->data().value();
@@ -381,14 +381,14 @@ grpc::Status GossipNode::ClientPut(grpc::ServerContext *context, const gossipnod
     response->set_ret(gossipnode::PutReturn::OK);
   }  else {
 
-    cout << "success count" << success_cnt << endl;
+    // cout << "success count" << success_cnt << endl;
     response->set_ret(gossipnode::PutReturn::FAILED);
   }
   return grpc::Status::OK;
 }
 
 grpc::Status GossipNode::PeerPut(grpc::ServerContext *context, const gossipnode::PeerPutRequest *request, gossipnode::PeerPutResponse *response) {
-  cout << "Received Peerput " << endl;
+  cout << MAGENTA << "Received peer put " << RESET << endl;
   // put result into rings
   string key = request->key();
   string value = request->data().value();
@@ -398,22 +398,22 @@ grpc::Status GossipNode::PeerPut(grpc::ServerContext *context, const gossipnode:
   }
   vector<pair<string, uint64_t>> old_version = state_machine_.get_version(key);
   response->set_success(1);
-  cout << "inside peer put ------" << endl;
-  print_version(new_version);
-  cout << "old version: ----" << endl;
-  print_version(old_version);
-  cout << "check conflict version: " << state_machine_.check_conflict_version(new_version, old_version) << endl;
+  // cout << "inside peer put ------" << endl;
+  // print_version(new_version);
+  // cout << "old version: ----" << endl;
+  // print_version(old_version);
+  // cout << "check conflict version: " << state_machine_.check_conflict_version(new_version, old_version) << endl;
   if (state_machine_.check_conflict_version(new_version, old_version) == 1) {
     // only apply unconflict data
     state_machine_.put(key, value, new_version);
     response->set_success(0);
-    cout << "inside peer put: applied log: " << key << " " << value << endl;
+    // cout << "inside peer put: applied log: " << key << " " << value << endl;
   }
   return grpc::Status::OK;
 }
 
 grpc::Status GossipNode::PeerGet(grpc::ServerContext *context, const gossipnode::PeerGetRequest *request, gossipnode::PeerGetResponse *response) {
-  cout << "Received PeerGet" << endl;
+  cout << MAGENTA << "Received peer get" << RESET << endl;
   // get result, put result into request results.
   string key = request->key();
   string value = state_machine_.get_value(key);
@@ -429,7 +429,7 @@ grpc::Status GossipNode::PeerGet(grpc::ServerContext *context, const gossipnode:
 }
 
 int GossipNode::peerPut(const string peer_server, const string key, const string& value, const vector<pair<string, uint64_t>>& vector_clock) {
-    cout << "Send peer put" << endl;
+    cout << MAGENTA << "Send peer put to: " << peer_server << RESET << endl;
     auto stub = stubs_[peer_server];
     grpc::ClientContext context;
     gossipnode::PeerPutRequest request;
@@ -450,7 +450,7 @@ int GossipNode::peerPut(const string peer_server, const string key, const string
 };
 
 int GossipNode::peerGet(const string peer_server, const string key, string& value, vector<pair<string, uint64_t>>& vector_clock) {
-    cout << "sent peerget to:" << peer_server << endl;
+    cout << MAGENTA << "Send peer get to: " << peer_server << RESET << endl;
     auto stub = stubs_[peer_server];
     grpc::ClientContext context;
     gossipnode::PeerGetRequest request;
@@ -466,13 +466,13 @@ int GossipNode::peerGet(const string peer_server, const string key, string& valu
 
     gossipnode::Data data = response.data();
     value = data.value();
-    cout << "Value: " << value << endl;
+    // cout << "Value: " << value << endl;
     
     for (const auto& server_version : data.version_info()) {
       string server = server_version.server();
       uint64_t version = server_version.version();
       vector_clock.push_back(std::make_pair(server, version));
-      cout << "  Server: " << server << ", Version: " << version << endl;
+      // cout << "  Server: " << server << ", Version: " << version << endl;
     }
   
     return 0;
