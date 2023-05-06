@@ -18,6 +18,13 @@ bool Admin::Cmd(const string& addr, const string& cmd) {
     }
     request.set_cmd(cmd);
     context.set_deadline(chrono::system_clock::now() + chrono::milliseconds(100));
+    if (cmd == "JoinNetwork") {
+        for (auto server : server_status_) {
+            if (server.second == true) {
+                request.add_alive_servers(server.first);
+            }
+        }
+    }
     grpc::Status status = stubs_[addr]->AdminCmd(&context, request, &response);
     cout << "sending " << cmd <<" to: " << addr << endl;
 

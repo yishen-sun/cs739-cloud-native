@@ -112,6 +112,7 @@ message PeerGetResponse {
 
 message AdminCmdRequest {
     string cmd = 1;
+    repeated string alive_servers = 2;
 }
 
 message AdminCmdResponse {

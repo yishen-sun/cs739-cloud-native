@@ -23,19 +23,28 @@ grpc::Status GossipNode::AdminCmd(grpc::ServerContext *context, const gossipnode
   response->set_success(false);
   if (request->cmd() == "JoinNetwork") {
     // acquire file write lock
-    std::unordered_set<std::string> res = read_server_config_update_stubs_();
+    // std::unordered_set<std::string> res = read_server_config_update_stubs_();
+    stubs_.clear();
+    for (auto addr : request->alive_servers()) {
+      std::cout << addr << std::endl;
+      if (addr != node_id_) {
+          ring_.addNode(addr);
+          stubs_[addr] =
+                gossipnode::GossipNodeService::NewStub(grpc::CreateChannel(addr, grpc::InsecureChannelCredentials()));
+        }
+    }
     joinNetwork();
-    state_machine_.write_nodes_config(res);
+    // state_machine_.write_nodes_config(res);
     alive_ = true;
     // release file write lock
     response->set_success(true);
   } else if (request->cmd() == "LeaveNetwork") {
     // acquire file write lock
-    std::unordered_set<std::string> res = state_machine_.get_nodes_config();
-    res.erase(node_id_);
+    // std::unordered_set<std::string> res = state_machine_.get_nodes_config();
+    // res.erase(node_id_);
     alive_ = false;
     leaveNetwork();
-    state_machine_.write_nodes_config(res);
+    // state_machine_.write_nodes_config(res);
     // release file write lock
     response->set_success(true);
   } else if (request->cmd() == "Ping") {
