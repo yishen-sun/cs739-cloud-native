@@ -6,6 +6,17 @@ set(CMAKE_CXX_STANDARD 20)
 project(dynamo-like-leveldb)
 
 option(USE_S3_ADMIN "use s3 instead of our own local key value store" OFF)
+if(USE_S3_ADMIN)
+message("USE USE_S3_ADMIN hahah")
+add_definitions(-DUSE_S3_ADMIN)
+find_package(AWSSDK REQUIRED COMPONENTS s3)
+find_package(ZLIB REQUIRED)
+include_directories(${AWSSDK_INCLUDE_DIRS})
+link_libraries(${AWSSDK_LINK_LIBRARIES})
+find_package(Threads REQUIRED)
+find_path(LEVELDB_INCLUDE_DIR NAMES leveldb/db.h HINTS ../../leveldb/include)
+find_library(LEVELDB_LIBRARY NAMES leveldb HINTS ../../leveldb/build)
+endif()
 
 # Protobuf
 set(protobuf_MODULE_COMPATIBLE TRUE)
@@ -47,17 +58,7 @@ add_custom_command(
 # Include generated *.pb.h files
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 
-if(USE_S3_ADMIN)
-message("USE USE_S3_ADMIN hahah")
-add_definitions(-DUSE_S3_ADMIN)
-find_package(AWSSDK REQUIRED COMPONENTS s3)
-find_package(ZLIB REQUIRED)
-include_directories(${AWSSDK_INCLUDE_DIRS})
-link_libraries(${AWSSDK_LINK_LIBRARIES})
-find_package(Threads REQUIRED)
-find_path(LEVELDB_INCLUDE_DIR NAMES leveldb/db.h HINTS ../../leveldb/include)
-find_library(LEVELDB_LIBRARY NAMES leveldb HINTS ../../leveldb/build)
-endif()
+
 
 add_executable(admin_cli 
     admin_cli.cpp
@@ -101,15 +102,16 @@ add_executable(gossip_node_test
     gossip_node.cpp
     consistent_hashing_ring.cpp
     state_machine.cpp)
+target_include_directories(gossip_node_test PRIVATE ${LEVELDB_INCLUDE_DIR})
 target_link_libraries(gossip_node_test
     ${_REFLECTION}
     ${_GRPC_GRPCPP}
     ${_PROTOBUF_LIBPROTOBUF}
-    stdc++fs)
-if(USE_S3_ADMIN)
-target_include_directories(gossip_node_test PRIVATE ${LEVELDB_INCLUDE_DIR})
-target_link_libraries(gossip_node_test ${LEVELDB_LIBRARY} Threads::Threads ${AWSSDK_LINK_LIBRARIES})
-endif()
+    stdc++fs
+    ${LEVELDB_LIBRARY}
+    Threads::Threads
+    ${AWSSDK_LINK_LIBRARIES})
+
 
 add_executable(state_machine_test state_machine_test.cpp state_machine.cpp)
 
