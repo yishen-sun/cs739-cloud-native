@@ -1,22 +1,14 @@
 # Minimum CMake required
-cmake_minimum_required(VERSION 3.5.1)
-set(CMAKE_CXX_STANDARD 20)
-
+cmake_minimum_required(VERSION 3.10)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
 # Project
 project(dynamo-like-leveldb)
 
+set(CMAKE_PREFIX_PATH "/users/yishen/out-s3;/users/yishen/out-grpc")
+
 option(USE_S3_ADMIN "use s3 instead of our own local key value store" OFF)
-if(USE_S3_ADMIN)
-message("USE USE_S3_ADMIN hahah")
-add_definitions(-DUSE_S3_ADMIN)
-find_package(AWSSDK REQUIRED COMPONENTS s3)
-find_package(ZLIB REQUIRED)
-include_directories(${AWSSDK_INCLUDE_DIRS})
-link_libraries(${AWSSDK_LINK_LIBRARIES})
-find_package(Threads REQUIRED)
-find_path(LEVELDB_INCLUDE_DIR NAMES leveldb/db.h HINTS ../../leveldb/include)
-find_library(LEVELDB_LIBRARY NAMES leveldb HINTS ../../leveldb/build)
-endif()
+
 
 # Protobuf
 set(protobuf_MODULE_COMPATIBLE TRUE)
@@ -95,6 +87,20 @@ target_link_libraries(consistent_hashing_ring_test
     ${_PROTOBUF_LIBPROTOBUF}
     stdc++fs)
 
+if(USE_S3_ADMIN)
+    message("USE USE_S3_ADMIN hahah")
+    add_definitions(-DUSE_S3_ADMIN)
+    set(OPENSSL_CRYPTO_LIBRARY "/usr/lib/x86_64-linux-gnu/libcrypto.so")
+    set(OPENSSL_SSL_LIBRARY "/usr/lib/x86_64-linux-gnu/libssl.so")
+    find_package(OpenSSL REQUIRED)
+    find_package(AWSSDK REQUIRED COMPONENTS s3)
+    find_package(ZLIB REQUIRED)
+    include_directories(${AWSSDK_INCLUDE_DIRS})
+    link_libraries(${AWSSDK_LINK_LIBRARIES})
+    find_package(Threads REQUIRED)
+    find_path(LEVELDB_INCLUDE_DIR NAMES leveldb/db.h HINTS ../../leveldb/include)
+    find_library(LEVELDB_LIBRARY NAMES leveldb HINTS ../../leveldb/build)
+endif()
 add_executable(gossip_node_test 
     gossip_node_test.cpp
     ${hw_proto_srcs}
@@ -110,7 +116,9 @@ target_link_libraries(gossip_node_test
     stdc++fs
     ${LEVELDB_LIBRARY}
     Threads::Threads
-    ${AWSSDK_LINK_LIBRARIES})
+    ${AWSSDK_LINK_LIBRARIES}
+    OpenSSL::SSL
+    OpenSSL::Crypto)
 
 
 add_executable(state_machine_test state_machine_test.cpp state_machine.cpp)

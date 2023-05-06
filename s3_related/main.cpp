@@ -4,7 +4,7 @@
 #include "leveldb/wrapper_db.h"
 
 int main() {
-  leveldb::LevelDBWrapper* db = new leveldb::LevelDBWrapper("bucketencoder", "test/", "us-east-2");
+  leveldb::LevelDBWrapper* db = new leveldb::LevelDBWrapper("bucketencoder", "test/", "us-east-2", false, "lock.txt");
   leveldb::Options options;
   options.create_if_missing = true;
 
