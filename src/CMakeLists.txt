@@ -111,6 +111,17 @@ target_link_libraries(performance_test
     ${_PROTOBUF_LIBPROTOBUF}
     stdc++fs)
 
+add_executable(admin_auto_start "./performance/admin_auto_start.cpp"
+    ${hw_proto_srcs}
+    ${hw_grpc_srcs}
+    admin_grpc.cpp
+    state_machine.cpp)
+target_link_libraries(admin_auto_start
+    ${_REFLECTION}
+    ${_GRPC_GRPCPP}
+    ${_PROTOBUF_LIBPROTOBUF}
+    stdc++fs)
+
 # foreach(_target
 #     client_cli gossip_node_test consistent_hashing_ring_test)
 #   target_link_libraries(${_target}
