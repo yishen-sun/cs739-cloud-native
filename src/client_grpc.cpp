@@ -22,6 +22,9 @@ bool KeyValueStoreClient::Put(const string& key, const string& value, bool retry
     if (retry == false) {
         do {
             success = Get(key, result); 
+            if (success != true) {
+                assigned_coordinator = random_pick_server();
+            }
         } while (success != true);
     }
 
@@ -103,14 +106,15 @@ bool KeyValueStoreClient::read_server_config() {
     return true;
 }
 
-void KeyValueStoreClient::random_pick_server() {
-    // auto random_server =
-    //     next(begin(server_config), rand_between(0, server_config.size() - 1));
+string KeyValueStoreClient::random_pick_server() {
+    auto random_server =
+        next(begin(server_config), rand_between(0, server_config.size() - 1));
     // grpc::ChannelArguments channel_args;
     // channel_args.SetInt(GRPC_ARG_MAX_RECEIVE_MESSAGE_LENGTH, INT_MAX);
-    // cout << random_server->second << endl;
+    cout << random_server->second << endl;
+    return random_server->second;
     // channel_ = grpc::CreateCustomChannel(random_server->second, grpc::InsecureChannelCredentials(),
-    //                                      channel_args);
+    //                                     channel_args);
     // stub_ = gossipnode::GossipNodeService::NewStub(channel_);
 }
 

@@ -38,7 +38,7 @@ class KeyValueStoreClient {
     string assigned_coordinator;
     unordered_map<string, string> server_config;  // k = name A, v = addr:port 0.0.0.0:50001
     bool read_server_config();
-    void random_pick_server();
+    string random_pick_server();
     int rand_between(int start, int end);
     StateMachine state_machine_;
     void reconcile(vector<pair<string, vector<pair<string, uint64_t>>>> conflict_versions, string key, string& result);
