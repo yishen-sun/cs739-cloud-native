@@ -1,0 +1,24 @@
+5 server:
+100 pairs, key: 100, value: 10
+Total time: 759 milliseconds
+500 pairs, key: 100, value: 10
+Total time: 4659 milliseconds
+1000 pairs, key: 100, value: 10
+Total time: 11353 milliseconds
+1500 pairs, key: 100, value: 10
+Total time: 19028 milliseconds
+2000 pairs, key: 100, value: 10
+Total time: 28516 milliseconds
+
+
+10 server:
+100 pairs, key: 100, value: 10
+Total time: 818 milliseconds
+500 pairs, key: 100, value: 10
+Total time: 5058 milliseconds
+1000 pairs, key: 100, value: 10
+Total time: 12165 milliseconds
+1500 pairs, key: 100, value: 10
+Total time: 20637 milliseconds
+2000 pairs, key: 100, value: 10
+Total time: 30702 milliseconds

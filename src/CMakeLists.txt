@@ -98,14 +98,27 @@ target_link_libraries(gossip_node_test
 add_executable(state_machine_test state_machine_test.cpp state_machine.cpp)
 
 
-add_executable(performance_test "./performance/throughput.cpp"
+# add_executable(performance_test "./performance/throughput.cpp"
+#     ${hw_proto_srcs}
+#     ${hw_grpc_srcs}
+#     client_grpc.h
+#     client_grpc.cpp
+#     state_machine.cpp
+#     ./performance/throughput.h)
+# target_link_libraries(performance_test
+#     ${_REFLECTION}
+#     ${_GRPC_GRPCPP}
+#     ${_PROTOBUF_LIBPROTOBUF}
+#     stdc++fs)
+
+add_executable(multiple_client_test "./performance/multiple_client_test.cpp"
     ${hw_proto_srcs}
     ${hw_grpc_srcs}
     client_grpc.h
     client_grpc.cpp
     state_machine.cpp
-    ./performance/throughput.h)
-target_link_libraries(performance_test
+    ./performance/throughput.cpp)
+target_link_libraries(multiple_client_test
     ${_REFLECTION}
     ${_GRPC_GRPCPP}
     ${_PROTOBUF_LIBPROTOBUF}
