@@ -40,6 +40,7 @@ void ThroughputTest::prepare_testcase(int num_iterations, int key_length, int va
 
 // Run the Put operation for a specified number of iterations
 void ThroughputTest::run_put_operation(int num_iterations) {
+    std::cout << "Start to run put operation" << std::endl;
     auto start_time = std::chrono::high_resolution_clock::now();
     bool res = true;
     int i = 0;
@@ -63,6 +64,7 @@ void ThroughputTest::run_put_operation(int num_iterations) {
 
 // Run the Get operation for a specified number of iterations
 void ThroughputTest::run_get_operation(int num_iterations) {
+    std::cout << "Start to run get operation" << std::endl;
     std::string result;
     auto start_time = std::chrono::high_resolution_clock::now();
     bool res = true;
