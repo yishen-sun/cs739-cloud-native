@@ -153,48 +153,6 @@ grpc::Status GossipNode::JoinNetwork(grpc::ServerContext *context, const gossipn
   return grpc::Status::OK;
 }
 
-bool GossipNode::updateRing() {
-  // Add myself to the ring
-  ring_.addNode(node_id_);
-
-  bool flag = true;
-  for (auto i : stubs_) {
-    grpc::ClientContext context;
-    gossipnode::UpdateRingRequest request;
-    gossipnode::UpdateRingResponse response;
-    request.set_node_id(node_id_);
-    grpc::Status status = i.second->UpdateRing(&context, request, &response);
-    if (!status.ok()) {
-      std::cerr << "UpdateRing RPC failed: " << i.first << " " << status.error_message() << std::endl;
-      flag = false;
-    } else {
-      if (!response.success()) std::cout << "UpdateRing response from node " << i.first << ": not success " << std::endl;
-      flag = false;
-    }
-  }
-  
-  if (flag) {
-    // update membership list
-    // members_heartbeat_list_[node_address] = std::chrono::high_resolution_clock::now();
-    std::cout << "Successfully join the network" << std::endl;
-  } else {
-    std::cout << "Partial-successfully join the network" << std::endl;
-  }
-  return flag;
-}
-
-grpc::Status GossipNode::UpdateRing(grpc::ServerContext *context, const gossipnode::UpdateRingRequest *request, gossipnode::UpdateRingResponse *response) {
-  // Add the joining node to the ring and update membership list
-  // ring_.addNode(request->node_id());
-  //members_heartbeat_list_[request->node_id()] = std::chrono::high_resolution_clock::now();
-  // for(std::string key : node_transfer_keys_[request->node_id()]) {
-  //   state_machine_.remove(key);
-  // }
-  // node_transfer_keys_.erase(request->node_id());
-  // response->set_success(true);
-  return grpc::Status::OK;
-}
-
 void GossipNode::leaveNetwork() {
   std::cout << BLUE << "Send leaveNetwork RPC" << RESET <<std::endl;
   ConsistentHashingRing old_ring(ring_);
@@ -216,8 +174,14 @@ void GossipNode::leaveNetwork() {
       std::vector<std::string> keys = getLeaveTransferKey(old_ring, i.first, REPLICA_N);
       for (auto key : keys) {
         int k = 0;
-        while (peerPut(i.first, key, state_machine_.get_value(key), state_machine_.get_version(key)) > 0 && k++ < 4) {
+        int res = peerPut(i.first, key, state_machine_.get_value(key), state_machine_.get_version(key));
+        while ( res > 0 && k++ < 4) {
+          res = peerPut(i.first, key, state_machine_.get_value(key), state_machine_.get_version(key));
           std::cout << "retry peerPut to " << i.first << " for " << k << " times" << std::endl;
+        }
+        if (res == 0) {
+          state_machine_.remove(key);
+          //node_transfer_keys_[request->node_id()].push_back(key);
         }
       }
     }

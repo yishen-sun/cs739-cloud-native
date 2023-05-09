@@ -36,4 +36,9 @@ JoinNetwork 0.0.0.0:90001
 ./gossip_node_test c220g5-111216.wisc.cloudlab.us:50001 3 c220g5-111216.wisc.cloudlab.us:50001 config.txt
 ./gossip_node_test c220g5-111220.wisc.cloudlab.us:50001 3 c220g5-111220.wisc.cloudlab.us:50001 config.txt
 
+JoinNetwork c220g5-111207.wisc.cloudlab.us:50001
+JoinNetwork c220g5-111232.wisc.cloudlab.us:50001
+JoinNetwork c220g5-111202.wisc.cloudlab.us:50001
+JoinNetwork c220g5-111216.wisc.cloudlab.us:50001
+JoinNetwork c220g5-111220.wisc.cloudlab.us:50001
 ```

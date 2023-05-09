@@ -36,9 +36,6 @@ public:
 
   bool joinNetwork();
   void leaveNetwork();
-
-  // grpc gossip will call this function
-  bool updateRing();
   
   // send members_heartbeat_list_ to other node
   void gossip();
@@ -57,9 +54,6 @@ public:
   // 1.1 then I mark the node is down, and update ring. If not, the node is not down.
   // 2. if I receive a new node, add to the list
   grpc::Status Gossip(grpc::ServerContext *context, const gossipnode::GossipRequest *request, gossipnode::GossipResponse *response) override;
-  
-  // receive ring metadata, and update
-  grpc::Status UpdateRing(grpc::ServerContext *context, const gossipnode::UpdateRingRequest *request, gossipnode::UpdateRingResponse *response) override;
   
   // write value in 3 physical node, receive more than 2 acknowledgement before return to clients
   grpc::Status ClientPut(grpc::ServerContext *context, const gossipnode::PutRequest *request, gossipnode::PutResponse *response) override;
