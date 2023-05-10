@@ -256,51 +256,63 @@ grpc::Status GossipNode::ClientGet(grpc::ServerContext *context, const gossipnod
     // data vector clock [[server_name, timestamp] ...] 
     string key = request->key();
     cout << "key: " << key << " hash: " << ring_.hashFunction(key) << endl;
-    vector<string> replica_servers = ring_.getReplicasNodes(key, 2 * REPLICA_N);
+    vector<string> replica_servers = ring_.getReplicasNodes(key, REPLICA_N);
     vector<pair<string, vector<pair<string, uint64_t>>>> results;
     // format: [D1, [[s1, 1], [s2, 2], [s3, 1]]]
-    int success_cnt = 0, try_cnt = 0;
+    std::vector<std::future<int>> futures;
+    std::atomic<int> success_cnt(0);  
+    std::atomic<int> try_cnt(0);
+    std::promise<void> success_promise;
+    std::future<void> success_future = success_promise.get_future();
+    std::mutex results_mutex;
     for (auto& peer_server : replica_servers) {
       if (peer_server == node_id_) {
         try_cnt++;
         success_cnt++;
+        std::lock_guard<std::mutex> lock(results_mutex);
         results.push_back(make_pair(state_machine_.get_value(key), state_machine_.get_version(key)));
-        if (try_cnt == REPLICA_N) break;
+        if (try_cnt.load() == REPLICA_N) break;
         continue;
       } 
       auto cur_time = std::chrono::high_resolution_clock::now();
       auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(cur_time - members_heartbeat_list_[peer_server]);
       if (duration_ms < std::chrono::milliseconds(CHECK_ALIVE_INTERVAL)) {
         // only send to alive machine
-        try_cnt++;
-        string value;
-        vector<pair<string, uint64_t>> vector_clock;
-        if (peerGet(peer_server, key, value, vector_clock) == 0) {
-          results.push_back(make_pair(value, vector_clock));
-          success_cnt += 1;
-          if (try_cnt == REPLICA_N) break;
+        futures.push_back(std::async(std::launch::async, [&, peer_server=peer_server, key=key]() {
+          if (try_cnt.load() == REPLICA_N) return 0;
+          try_cnt++;
+          string value;
+          vector<pair<string, uint64_t>> vector_clock;
+          if (peerGet(peer_server, key, value, vector_clock) == 0) {
+            std::lock_guard<std::mutex> lock(results_mutex);
+            results.push_back(make_pair(value, vector_clock));
+            success_cnt++;
+          }
+          if (success_cnt.load() >= W_COUNT) {
+              success_promise.set_value();
+          }
+          return 0;
+        }));
+      }
+    }
+    if (success_future.wait_for(std::chrono::seconds(MAX_WAIT_TIME)) == std::future_status::ready) {
+      std::lock_guard<std::mutex> lock(results_mutex);
+      results = state_machine_.get_latest_data(results);
+      for (auto result : results) {
+        gossipnode::Data *add_data = response->add_get_res_data();
+        add_data->set_value(result.first);
+        for (auto version_info : result.second) {
+          gossipnode::ServerVersion* server_version = add_data->add_version_info();
+          server_version->set_server(version_info.first);
+          server_version->set_version(version_info.second);
         }
       }
-    }
-
-    results = state_machine_.get_latest_data(results);
-
-    for (auto result : results) {
-      gossipnode::Data *add_data = response->add_get_res_data();
-      add_data->set_value(result.first);
-      for (auto version_info : result.second) {
-        gossipnode::ServerVersion* server_version = add_data->add_version_info();
-        server_version->set_server(version_info.first);
-        server_version->set_version(version_info.second);
-        
-      }
-    }
-    string coordinator_candidate = assigned_coordinator(replica_servers);
-    response->set_coordinator(coordinator_candidate);
-    if (success_cnt >= R_COUNT) {
+      string coordinator_candidate = assigned_coordinator(replica_servers);
+      response->set_coordinator(coordinator_candidate);
       return grpc::Status::OK;
+    } else {
+      return grpc::Status::CANCELLED;
     }
-    return grpc::Status::CANCELLED;
 }
 
 grpc::Status GossipNode::ClientPut(grpc::ServerContext *context, const gossipnode::PutRequest *request, gossipnode::PutResponse *response) {
@@ -315,7 +327,7 @@ grpc::Status GossipNode::ClientPut(grpc::ServerContext *context, const gossipnod
 
   cout << "PUT: key: " << key << " hash: " << ring_.hashFunction(key) << endl;
 
-  std::vector<std::string> replica_servers = ring_.getReplicasNodes(key, 2 * REPLICA_N);
+  std::vector<std::string> replica_servers = ring_.getReplicasNodes(key, REPLICA_N);
   string coordinator_candidate = assigned_coordinator(replica_servers);
   bool check_coordinator = is_coordinator(replica_servers);
   response->set_coordinator(coordinator_candidate);
@@ -326,35 +338,41 @@ grpc::Status GossipNode::ClientPut(grpc::ServerContext *context, const gossipnod
   
   vector<pair<string, uint64_t>> new_version = state_machine_.update_version(versions, node_id_);
 
-  int success_cnt = 0;
-  int try_cnt = 0;
+  std::vector<std::future<int>> futures;
+  std::atomic<int> success_cnt(0);  
+  std::atomic<int> try_cnt(0);
+  std::promise<void> success_promise;
+  std::future<void> success_future = success_promise.get_future();
   for (auto peer_server : replica_servers) {
     if (peer_server == node_id_) {
       try_cnt++;
       success_cnt++;
       state_machine_.put(key, value, new_version);
-      if (try_cnt == REPLICA_N) break;
+      if (try_cnt.load() == REPLICA_N) break;
       continue;
     }
+
     auto cur_time = std::chrono::high_resolution_clock::now();
     auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(cur_time - members_heartbeat_list_[peer_server]);
     if (duration_ms < std::chrono::milliseconds(CHECK_ALIVE_INTERVAL)) {
       // only send to alive machine
-      try_cnt++;
-      vector<pair<string, uint64_t>> vector_clock;
-      if (peerPut(peer_server, key, value, new_version) == 0) {
-        success_cnt += 1;
-        if (try_cnt == REPLICA_N) break;
-      }
+      futures.push_back(std::async(std::launch::async, [&, peer_server=peer_server, key=key, value=value, new_version=new_version]() {
+        if (try_cnt.load() == REPLICA_N) return 0;
+        try_cnt++;
+        if (peerPut(peer_server, key, value, new_version) == 0) {
+          success_cnt++;
+        }
+        if (success_cnt.load() >= W_COUNT) {
+            success_promise.set_value();
+        }
+        return 0;
+      }));
     }
   }
 
-
-  if (success_cnt >= W_COUNT) {
+  if (success_future.wait_for(std::chrono::seconds(MAX_WAIT_TIME)) == std::future_status::ready) {
     response->set_ret(gossipnode::PutReturn::OK);
-  }  else {
-
-    // cout << "success count" << success_cnt << endl;
+  } else {
     response->set_ret(gossipnode::PutReturn::FAILED);
   }
   return grpc::Status::OK;
@@ -401,7 +419,7 @@ grpc::Status GossipNode::PeerGet(grpc::ServerContext *context, const gossipnode:
   return grpc::Status::OK;
 }
 
-int GossipNode::peerPut(const string peer_server, const string key, const string& value, const vector<pair<string, uint64_t>>& vector_clock) {
+int GossipNode::peerPut(const string peer_server, const string key, const string value, const vector<pair<string, uint64_t>> vector_clock) {
     cout << MAGENTA << "Send peer put to: " << peer_server << RESET << endl;
     auto stub = stubs_[peer_server];
     grpc::ClientContext context;

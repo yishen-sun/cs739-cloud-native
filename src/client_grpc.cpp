@@ -24,6 +24,7 @@ bool KeyValueStoreClient::Put(const string& key, const string& value, bool retry
             success = Get(key, result); 
             if (success != true) {
                 assigned_coordinator = random_pick_server();
+                cout << "assigned_coordinator " << assigned_coordinator << endl;
             }
         } while (success != true);
     }
@@ -62,34 +63,42 @@ bool KeyValueStoreClient::Put(const string& key, const string& value, bool retry
 }
 
 bool KeyValueStoreClient::Get(const string& key, string& result) {
-    grpc::ClientContext context;
-    gossipnode::GetRequest request;
-    gossipnode::GetResponse response;
+    bool success;
+    int cnt = 0;
+    do {
+        grpc::ClientContext context;
+        gossipnode::GetRequest request;
+        gossipnode::GetResponse response;
 
-    request.set_key(key);
-    context.set_deadline(chrono::system_clock::now() + chrono::milliseconds(100));
-    // cout << "send get to: " << assigned_coordinator << endl;
-    grpc::Status status = stubs_[assigned_coordinator]->ClientGet(&context, request, &response);
-    
-    vector<pair<string, vector<pair<string, uint64_t>>>> potential_result;
-    vector<pair<string, uint64_t>> vector_clock;
-    if (status.ok()) {
-        for (const auto& data : response.get_res_data()) {
-            string value = data.value();
-            vector_clock.clear();
-            for (const auto& server_version : data.version_info()) {
-                vector_clock.push_back(make_pair(server_version.server(), server_version.version()));
-            }
-            potential_result.push_back(make_pair(value, vector_clock));
-        }
-        update_channel_to_coordinator(response.coordinator());
-        reconcile(potential_result, key, result);
-        return true;
+        request.set_key(key);
+        context.set_deadline(chrono::system_clock::now() + chrono::milliseconds(100));
+        // cout << "send get to: " << assigned_coordinator << endl;
+        grpc::Status status = stubs_[assigned_coordinator]->ClientGet(&context, request, &response);
         
-    } else {
-        cerr << "Get RPC failed: " << status.error_message() << endl;
-        return false;
-    }
+        vector<pair<string, vector<pair<string, uint64_t>>>> potential_result;
+        vector<pair<string, uint64_t>> vector_clock;
+        if (status.ok()) {
+            for (const auto& data : response.get_res_data()) {
+                string value = data.value();
+                vector_clock.clear();
+                for (const auto& server_version : data.version_info()) {
+                    vector_clock.push_back(make_pair(server_version.server(), server_version.version()));
+                }
+                potential_result.push_back(make_pair(value, vector_clock));
+            }
+            update_channel_to_coordinator(response.coordinator());
+            reconcile(potential_result, key, result);
+            success = true;
+            
+        } else {
+            cerr << "Get RPC failed: " << status.error_message() << endl;
+            success = false;
+            assigned_coordinator = random_pick_server();
+            cout << "random assigned_coordinator " << assigned_coordinator << endl;
+        }
+        cnt++;
+    } while (success != true && cnt < 10);
+    return success;
 
 }
 
@@ -101,6 +110,7 @@ bool KeyValueStoreClient::read_server_config() {
         channel_args.SetInt(GRPC_ARG_MAX_RECEIVE_MESSAGE_LENGTH, INT_MAX);
         std::shared_ptr<grpc::Channel> channel_ = grpc::CreateCustomChannel(server_addr, grpc::InsecureChannelCredentials(), channel_args);
         stubs_[server_addr] = gossipnode::GossipNodeService::NewStub(channel_);
+        server_config[server_addr] = server_addr;
         cout << "success init " << server_addr << endl;
     }
     return true;

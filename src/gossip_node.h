@@ -11,6 +11,8 @@
 #include <cstdlib>
 #include <ctime>
 #include <vector>
+#include <future>
+
 
 const int REPLICA_N = 3;
 const int W_COUNT = 2;
@@ -18,6 +20,7 @@ const int R_COUNT = 2;
 constexpr int HEARTBEAT_INTERVAL = 5000;
 constexpr int CHECK_ALIVE_INTERVAL = 10000;
 const bool FIXED_CONFIG_TEST = false;
+const int MAX_WAIT_TIME = 10;
 
 #define RESET "\033[0m"
 #define BLACK "\033[30m"   /* Black */
@@ -41,7 +44,7 @@ public:
   void gossip();
   // send heartbeat to a set of random node
 
-  int peerPut(const std::string peer_server, const std::string key, const std::string& value,const std::vector<std::pair<std::string, uint64_t>>& vector_clock);
+  int peerPut(const std::string peer_server, const std::string key, const std::string value,const std::vector<std::pair<std::string, uint64_t>> vector_clock);
   int peerGet(const std::string peer_server, const std::string key, std::string& value, std::vector<std::pair<std::string, uint64_t>>& vector_clock);
 
   // gRPC service method implementations
