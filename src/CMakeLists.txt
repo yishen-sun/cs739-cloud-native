@@ -82,14 +82,14 @@ target_link_libraries(consistent_hashing_ring_test
     ${_PROTOBUF_LIBPROTOBUF}
     stdc++fs)
 
-add_executable(gossip_node_test 
-    gossip_node_test.cpp
+add_executable(dynamo_server 
+    dynamo_server.cpp
     ${hw_proto_srcs}
     ${hw_grpc_srcs}
     gossip_node.cpp
     consistent_hashing_ring.cpp
     state_machine.cpp)
-target_link_libraries(gossip_node_test
+target_link_libraries(dynamo_server
     ${_REFLECTION}
     ${_GRPC_GRPCPP}
     ${_PROTOBUF_LIBPROTOBUF}
