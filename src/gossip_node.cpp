@@ -2,20 +2,13 @@
 
 GossipNode::GossipNode(const std::string &node_id, int num_virtual_nodes, const std::string &server_address, const std::string& config_path)
     : node_id_(node_id), server_address_(server_address), ring_(node_id, num_virtual_nodes), state_machine_(node_id + "_storage.txt", config_path), alive_(false) {
-  // srand(static_cast<unsigned int>(time(nullptr)));
-  // channel_ = grpc::CreateChannel(server_address, grpc::InsecureChannelCredentials());
-  // stub_ = gossipnode::GossipNodeService::NewStub(channel_);
-  
+
   if (FIXED_CONFIG_TEST == true) {
     alive_ = true;
     std::unordered_set<std::string> res = read_server_config_update_stubs_();
     state_machine_.read_file();
     ring_.addNode(node_id_);
     // ring_.printAllVirtualNode();
-  } else {
-    
-    // joinNetwork();
-    // state_machine_.write_nodes_config(res);
   }
 }
 
@@ -23,7 +16,6 @@ grpc::Status GossipNode::AdminCmd(grpc::ServerContext *context, const gossipnode
   response->set_success(false);
   if (request->cmd() == "JoinNetwork") {
     // acquire file write lock
-    // std::unordered_set<std::string> res = read_server_config_update_stubs_();
     stubs_.clear();
     for (auto addr : request->alive_servers()) {
       std::cout << addr << std::endl;
@@ -34,17 +26,13 @@ grpc::Status GossipNode::AdminCmd(grpc::ServerContext *context, const gossipnode
         }
     }
     joinNetwork();
-    // state_machine_.write_nodes_config(res);
     alive_ = true;
     // release file write lock
     response->set_success(true);
   } else if (request->cmd() == "LeaveNetwork") {
-    // acquire file write lock
-    // std::unordered_set<std::string> res = state_machine_.get_nodes_config();
-    // res.erase(node_id_);
+    // acquire file write lock;
     alive_ = false;
     leaveNetwork();
-    // state_machine_.write_nodes_config(res);
     // release file write lock
     response->set_success(true);
   } else if (request->cmd() == "Ping") {
@@ -60,16 +48,6 @@ std::unordered_set<std::string> GossipNode::read_server_config_update_stubs_() {
     // <name>/<addr> e.g. A/0.0.0.0:50001
     // TODO: link to S3
     std::unordered_set<std::string> server_config = state_machine_.get_nodes_config();
-    // std::ifstream infile(config_path);
-    // std::string line;
-    // while (std::getline(infile, line)) {
-    //     size_t pos = line.find('/');
-    //     if (pos != std::string::npos) {
-    //         std::string key = line.substr(0, pos);
-    //         std::string value = line.substr(pos + 1, line.size() - pos - 1);
-    //         server_config[key] = value;
-    //     }
-    // }
     stubs_.clear();
     for (const auto& addr : server_config) {
         if (addr != node_id_) {
@@ -457,11 +435,6 @@ bool GossipNode::is_coordinator(vector<string>& quorum_member) {
   }
   return false;
 }
-
-//TODO: shutdown after complete
-// int main() {
-//   return 0;
-// }
 
 void GossipNode::print_version(vector<pair<string, uint64_t>> versions) {
   for (const auto& v : versions) {
